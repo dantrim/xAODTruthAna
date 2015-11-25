@@ -35,6 +35,7 @@ class TruthSelector : public TSelector
         // configure the run
         void initializeOutputTree();
         void initializeTreeBranches();
+        void clearContainers();
         void saveOutputTree();
         void setDebug(int dbgLevel) { m_dbg = dbgLevel; }
 
@@ -51,10 +52,79 @@ class TruthSelector : public TSelector
         std::string m_inputSampleName;
         std::string m_outputFileName;
 
-        // output tree
+        
+        //----------------------------------------
+        // Variables for the output tree
+        //----------------------------------------
+
+        // event vars
         unsigned long long m_br_runNumber;
         unsigned long long m_br_eventNumber;
         double m_br_eventWeight;
+        std::vector<double> m_br_eventWeights;
+
+        // lepton vars
+        int m_br_lepton_n;
+        std::vector<double> m_br_lepton_pt;
+        std::vector<double> m_br_lepton_eta;
+        std::vector<double> m_br_lepton_phi;
+        std::vector<int> m_br_lepton_pdgId;
+        std::vector<int> m_br_lepton_charge;
+        std::vector<int> m_br_lepton_type;
+        std::vector<int> m_br_lepton_origin;
+        int m_br_isSF;
+        int m_br_isDF;
+        int m_br_isEE;
+        int m_br_isMM;
+        int m_br_isEM;
+
+        // jet vars
+        int m_br_jet_n;
+        std::vector<double> m_br_jet_pt;
+        std::vector<double> m_br_jet_eta;
+        std::vector<double> m_br_jet_phi;
+        std::vector<double> m_br_jet_m;
+        std::vector<int>    m_br_jet_flav;
+
+        // light jet vars
+        int m_br_ljet_n;
+        std::vector<double> m_br_ljet_pt;
+        std::vector<double> m_br_ljet_eta;
+        std::vector<double> m_br_ljet_phi;
+        std::vector<double> m_br_ljet_m;
+        std::vector<int>    m_br_ljet_flav;
+
+        // c jet vars
+        int m_br_cjet_n;
+        std::vector<double> m_br_cjet_pt;
+        std::vector<double> m_br_cjet_eta;
+        std::vector<double> m_br_cjet_phi;
+        std::vector<double> m_br_cjet_m;
+        std::vector<int>    m_br_cjet_flav;
+
+        // b jet vars
+        int m_br_bjet_n;
+        std::vector<double> m_br_bjet_pt;
+        std::vector<double> m_br_bjet_eta;
+        std::vector<double> m_br_bjet_phi;
+        std::vector<double> m_br_bjet_m;
+        std::vector<int>    m_br_bjet_flav;
+
+        // heavy-flavor jet vars
+        int m_br_hjet_n;
+        std::vector<double> m_br_hjet_pt;
+        std::vector<double> m_br_hjet_eta;
+        std::vector<double> m_br_hjet_phi;
+        std::vector<double> m_br_hjet_m;
+        std::vector<int>    m_br_hjet_flav;
+
+        // gluon jet vars
+        int m_br_gjet_n;
+        std::vector<double> m_br_gjet_pt;
+        std::vector<double> m_br_gjet_eta;
+        std::vector<double> m_br_gjet_phi;
+        std::vector<double> m_br_gjet_m;
+        std::vector<int>    m_br_gjet_flav;
 
 
     protected :
