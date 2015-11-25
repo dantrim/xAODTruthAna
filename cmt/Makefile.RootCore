@@ -10,7 +10,7 @@
 PACKAGE              = xAODTruthAna
 
 # the libraries to link with this one:
-PACKAGE_PRELOAD      = 
+PACKAGE_PRELOAD      = Graf Gpad Hist Physics Tree 
 
 # additional compilation flags to pass (not propagated to dependent packages):
 PACKAGE_CXXFLAGS     = 
@@ -19,7 +19,7 @@ PACKAGE_CXXFLAGS     =
 PACKAGE_OBJFLAGS     = 
 
 # additional linker flags to pass (for compiling the library):
-PACKAGE_LDFLAGS      = 
+PACKAGE_LDFLAGS      = $(shell root-config --libs --glibs) 
 
 # additional linker flags to pass (for compiling binaries):
 PACKAGE_BINFLAGS     = 
@@ -28,7 +28,7 @@ PACKAGE_BINFLAGS     =
 PACKAGE_LIBFLAGS     = 
 
 # the list of packages we depend on:
-PACKAGE_DEP = EventLoop EventLoopAlgs EventLoopGrid xAODRootAccess xAODEventInfo xAODTruth xAODMissingET xAODJet
+PACKAGE_DEP = xAODBase xAODRootAccess xAODEventInfo xAODTruth xAODMissingET xAODJet
 
 # the list of packages we use if present, but that we can work without :
 PACKAGE_TRYDEP       = 

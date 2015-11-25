@@ -6,7 +6,9 @@
 #pragma link off all classes;
 #pragma link off all functions;
 #pragma link C++ nestedclass;
+#pragma linke C++ nestedtypedef;
+
+#pragma link C++ class TruthSelector+;
 
 #endif
 
-#pragma link C++ class TruthSelector+;

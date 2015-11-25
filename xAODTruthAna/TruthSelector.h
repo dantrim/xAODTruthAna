@@ -1,53 +1,71 @@
-#ifndef xAODTruthAna_TruthSelector_H
-#define xAODTruthAna_TruthSelector_H
+#ifndef xAODTruthAna_TruthSelector_h
+#define xAODTruthAna_TruthSelector_h
 
-//EventLoop
-#include <EventLoop/Algorithm.h>
+//infrastructure
+//#include "xAODRootAccess/Init.h"
+//#include "xAODRootAccess/TEvent.h"
+//#include "xAODRootAccess/TStore.h"
+//#include "xAODEventInfo/EventInfo.h"
+//#include "xAODEventFormat/EventFormat.h"
+//#include "xAODCore/ShallowCopy.h"
 
 //ROOT
-#include "TTree.h"
+#include "TSelector.h"
+//#include "TTree.h"
+//#include "TChain.h"
+//#include "TTreeFormula.h"
+#include "TFile.h"
 
 //std/stl
 #include <string>
 #include <vector>
 
-class TruthSelector : public EL::Algorithm
+class TTree;
+namespace xAOD {
+    class TEvent;
+}
+
+class TruthSelector : public TSelector
 {
+
     public :
-        // variables that don't get filled at submission time should
-        // be protected from being sent from the submission node to
-        // the worker node (by using //!)
-
-        bool verbose; //!
-
-        // standard constructor
         TruthSelector();
+        virtual ~TruthSelector();
 
-        // Output Tree
-        TTree *m_outTree; //!
-        std::string *m_outFileName;
+        // configure the run
+        void initializeOutputTree();
+        void initializeTreeBranches();
+        void saveOutputTree();
+        void setDebug(int dbgLevel) { m_dbg = dbgLevel; }
 
-        unsigned long long m_br_runNumber; //!
-        unsigned long long m_br_eventNumber; //!
-        double m_br_eventWeight; //!
-        std::vector<float> m_br_lpt; //!
-        std::vector<float> m_br_leta; //!
-        std::vector<float> m_br_lphi; //!
+        // TSelector methods
+        virtual Int_t Version() const { return 2; }
+        virtual void Init(TTree *tree);             
+        virtual Bool_t Notify();
+        virtual void Begin(TTree* tree);                       
+        virtual void SlaveBegin(TTree *tree);
+        virtual void Terminate();                   
+        virtual Bool_t Process(Long64_t entry);     
+        
 
-        // Algorithm
-        virtual EL::StatusCode setupJob(EL::Job& job);
-        virtual EL::StatusCode fileExecute();
-        virtual EL::StatusCode histInitialize();
-        virtual EL::StatusCode initialize();
-        virtual EL::StatusCode execute();
-        virtual EL::StatusCode postExecute();
-        virtual EL::StatusCode finalize();
-        virtual EL::StatusCode histFinalize();
-      
-    // ClassDef needed to distribute the algorithm to the workers
-    ClassDef(TruthSelector, 1); 
+        std::string m_inputSampleName;
+        std::string m_outputFileName;
 
-}; // class 
+        // output tree
+        unsigned long long m_br_runNumber;
+        unsigned long long m_br_eventNumber;
+        double m_br_eventWeight;
 
+
+    protected :
+        TFile *m_outTreeFile;
+        TTree *m_outputTree;
+        TTree *m_tree;
+        xAOD::TEvent* m_event;
+        int m_dbg;
+
+    ClassDef(TruthSelector, 0);
+
+}; // TruthSelector
 
 #endif
