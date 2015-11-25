@@ -565,7 +565,7 @@ Bool_t TruthSelector::Process(Long64_t entry)
         m_br_bjet_pt.push_back           (j->pt()*mev2gev);
         m_br_bjet_eta.push_back          (j->eta());
         m_br_bjet_phi.push_back          (j->phi());
-        m_br_bjet_m.push_back            (j->m());
+        m_br_bjet_m.push_back            (j->m()*mev2gev);
         m_br_bjet_flav.push_back         (abs(j->auxdata<int>("PartonTruthLabelID")));
     }
     for(const auto j : v_gjet) {
