@@ -126,6 +126,31 @@ class TruthSelector : public TSelector
         std::vector<double> m_br_gjet_m;
         std::vector<int>    m_br_gjet_flav;
 
+        // met vars
+        double m_br_met_et;
+        double m_br_met_phi;
+
+        // mt2
+        double m_br_mt2;
+
+        // meff
+        double m_br_meff;
+        double m_br_meff_S2L;
+
+        // dilepton
+        double m_br_dphiLL;
+        double m_br_ptLL;
+        double m_br_drLL;
+        double m_br_mll;
+
+        // pbLL
+        double m_br_pbLL;
+        double m_br_dphi_met_pbLL;
+
+        // r1
+        double m_br_r1;
+        double m_br_r1_S2L;
+
 
     protected :
         TFile *m_outTreeFile;

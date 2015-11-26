@@ -25,6 +25,9 @@ using namespace std;
 #include "xAODJet/Jet.h"
 #include "xAODJet/JetContainer.h"
 
+//some crappy MT2 code
+#include "xAODTruthAna/MT2_ROOT.h"
+
 ClassImp(TruthSelector)
 
 
@@ -212,6 +215,30 @@ void TruthSelector::initializeTreeBranches()
     m_outputTree->Branch("gj_m",     &m_br_gjet_m                 );
     m_outputTree->Branch("gj_flav",  &m_br_gjet_flav              );
 
+    // met vars
+    m_outputTree->Branch("met_et",   &m_br_met_et                 );
+    m_outputTree->Branch("met_phi",  &m_br_met_phi                );
+
+    // mt2
+    m_outputTree->Branch("mt2",      &m_br_mt2                    );
+
+    // meff
+    m_outputTree->Branch("meff",     &m_br_meff                   );
+    m_outputTree->Branch("meff_S2L", &m_br_meff_S2L               );
+
+    // dilepton
+    m_outputTree->Branch("dphiLL",   &m_br_dphiLL                 );
+    m_outputTree->Branch("ptLL",     &m_br_ptLL                   );
+    m_outputTree->Branch("drLL",     &m_br_drLL                   );
+    m_outputTree->Branch("mll",      &m_br_mll                    );
+
+    // pbLL
+    m_outputTree->Branch("pbLL",     &m_br_pbLL                   );
+    m_outputTree->Branch("dphi_met_pbLL", &m_br_dphi_met_pbLL     );
+
+    // r1
+    m_outputTree->Branch("r1",       &m_br_r1                     );
+    m_outputTree->Branch("r1_S2L",   &m_br_r1_S2L                 );
 
 
 
@@ -279,6 +306,24 @@ void TruthSelector::clearContainers()
     m_br_gjet_m.clear();
     m_br_gjet_flav.clear();
 
+    m_br_met_et = -999;
+    m_br_met_phi = -999;
+
+    m_br_mt2 = -999;
+    m_br_meff = -999;
+    m_br_meff_S2L = -999;
+
+    m_br_dphiLL = -999;
+    m_br_ptLL = -999;
+    m_br_drLL = -999;
+    m_br_mll = -999;
+
+    m_br_pbLL = -999;
+    m_br_dphi_met_pbLL = -999;
+
+    m_br_r1 = -999;
+    m_br_r1_S2L = -999;
+
 }
 // ---------------------------------------------------------
 void TruthSelector::saveOutputTree()
@@ -299,7 +344,7 @@ void TruthSelector::saveOutputTree()
 }
 
 // ------------------------------------------------------------
-// Define some convenience methods
+// Define some convenience methods a la Davide.Gerbaudo@cern.ch
 
 template <class Container>
 double sumPt(Container &container)
@@ -426,9 +471,6 @@ Bool_t TruthSelector::Process(Long64_t entry)
     const xAOD::MissingETContainer* met = 0;
     RETURN_CHECK( GetName(), m_event->retrieve( met, "MET_Truth" ));
 
-    xAOD::MissingETContainer::const_iterator met_it = met->begin();
-
-
     // ----------------------------
     // Overlap Removal
     // ----------------------------
@@ -504,11 +546,11 @@ Bool_t TruthSelector::Process(Long64_t entry)
             truthJetFlavorMultiplicity[flavor] = 1;
     } // jet
 
-    JftMultiplicity::iterator fj_it = truthJetFlavorMultiplicity.begin();
-    JftMultiplicity::iterator fj_end = truthJetFlavorMultiplicity.end();
-    for( ; fj_it != fj_end; ++fj_it ){
-        cout << "flav: " << fj_it->first << "  mult: " << fj_it->second << endl;
-    } 
+    //JftMultiplicity::iterator fj_it = truthJetFlavorMultiplicity.begin();
+    //JftMultiplicity::iterator fj_end = truthJetFlavorMultiplicity.end();
+    //for( ; fj_it != fj_end; ++fj_it ){
+    //    cout << "flav: " << fj_it->first << "  mult: " << fj_it->second << endl;
+    //} 
 
     // ------------------------------
     //  Calculate lepton variables
@@ -582,6 +624,67 @@ Bool_t TruthSelector::Process(Long64_t entry)
         m_br_hjet_m.push_back            (j->m()*mev2gev);
         m_br_hjet_flav.push_back         (abs(j->auxdata<int>("PartonTruthLabelID")));
     }
+
+    // -----------------------------
+    //  Calculate met variables
+    // -----------------------------
+    TLorentzVector met_tlv;
+    met_tlv.SetPxPyPzE((*met)["NonInt"]->mpx(),
+                       (*met)["NonInt"]->mpy(),
+                       0.,
+                       (*met)["NonInt"]->met());
+    m_br_met_et = met_tlv.Pt();
+    m_br_met_phi = met_tlv.Phi();
+
+
+    // -----------------------------
+    //  Calculate mt2
+    // -----------------------------
+    TLorentzVector lep0_tlv, lep1_tlv;
+    lep0_tlv.SetPxPyPzE(v_lepton.at(0)->px(), v_lepton.at(0)->py(), v_lepton.at(0)->pz(), v_lepton.at(0)->e());
+    lep1_tlv.SetPxPyPzE(v_lepton.at(1)->px(), v_lepton.at(1)->py(), v_lepton.at(1)->pz(), v_lepton.at(1)->e());
+
+    ComputeMT2 mycalc = ComputeMT2(lep0_tlv, lep1_tlv, met_tlv, 0., 0.); // assumed masses 0. 0.
+    m_br_mt2 = mycalc.Compute();
+
+    // -----------------------------
+    //  Calculate meff(s)
+    // -----------------------------
+    double meff = sumPt(v_lepton) + sumPt(v_jet) + met_tlv.Pt()*mev2gev;
+    double meff_S2L = sumPt(v_lepton) + met_tlv.Pt()*mev2gev;
+    for(int ij = 0; ij < (int)v_jet.size(); ij++){
+        if(ij < 2) meff_S2L += v_jet.at(ij)->pt() * mev2gev;
+        else
+            break;
+    } // ij
+
+    m_br_meff = meff;
+    m_br_meff_S2L = meff_S2L;
+
+    // -----------------------------
+    //  dilepton vars
+    // -----------------------------
+    m_br_dphiLL = lep0_tlv.DeltaPhi(lep1_tlv);
+    m_br_ptLL = (lep0_tlv + lep1_tlv).Pt() * mev2gev;
+    m_br_drLL = lep0_tlv.DeltaR(lep1_tlv);
+    m_br_mll = (lep0_tlv + lep1_tlv).M() * mev2gev;
+
+    // -----------------------------
+    //  pbLL
+    // -----------------------------
+    m_br_pbLL = (lep0_tlv + lep1_tlv + met_tlv).Pt() * mev2gev;
+    m_br_dphi_met_pbLL = met_tlv.DeltaPhi(lep0_tlv+lep1_tlv+met_tlv);
+
+    // -----------------------------
+    //  r1
+    // -----------------------------
+    m_br_r1 = met_tlv.Pt() * mev2gev / 1.0 * meff;
+    m_br_r1_S2L = met_tlv.Pt() * mev2gev / 1.0 * meff_S2L;
+    
+
+
+
+
 
     // -----------------------------
     //  Fill the output ntuple
