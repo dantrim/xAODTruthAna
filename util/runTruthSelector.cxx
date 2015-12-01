@@ -35,6 +35,7 @@ int main(int argc, char** argv)
     string inputSampleName = "";
     string fileList = "fileList.txt";
     string outputFileName = "superTruth.root";
+    bool do_wz_to_ww = false;
 
     cout << "runTruthSelector" << endl;
     cout << endl;
@@ -46,6 +47,7 @@ int main(int argc, char** argv)
         else if (opt=="-n" || opt=="--num-events") { nEvt = atoi(argv[++optin]); }
         else if (opt=="-f" || opt=="--filelist") { fileList = argv[++optin]; }
         else if (opt=="-d" || opt=="--dbg-level") { dbg = atoi(argv[++optin]); }
+        else if (opt=="--wz2ww") { do_wz_to_ww = true; }
         else if (opt=="--outfile-name") { outputFileName = argv[++optin]; }
         else {
             cout << "Unknown command line argument : '" << opt << "'" << endl;
@@ -74,6 +76,9 @@ int main(int argc, char** argv)
     susyAna->setDebug(dbg);
     susyAna->m_inputSampleName = inputSampleName;
     susyAna->m_outputFileName = outputFileName;
+    if(do_wz_to_ww)
+        cout << "Running WZ-to-WW" << endl;
+    susyAna->setWZ2WW(do_wz_to_ww);
 
     if(nEvt<0) nEvt = nEntries;
     cout << endl;
