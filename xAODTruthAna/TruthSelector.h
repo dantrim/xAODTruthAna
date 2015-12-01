@@ -1,28 +1,24 @@
 #ifndef xAODTruthAna_TruthSelector_h
 #define xAODTruthAna_TruthSelector_h
 
-//infrastructure
-//#include "xAODRootAccess/Init.h"
-//#include "xAODRootAccess/TEvent.h"
-//#include "xAODRootAccess/TStore.h"
-//#include "xAODEventInfo/EventInfo.h"
-//#include "xAODEventFormat/EventFormat.h"
-//#include "xAODCore/ShallowCopy.h"
-
 //ROOT
 #include "TSelector.h"
 //#include "TTree.h"
 //#include "TChain.h"
 //#include "TTreeFormula.h"
 #include "TFile.h"
+#include "TStopwatch.h"
+#include "TLorentzVector.h"
 
 //std/stl
 #include <string>
 #include <vector>
+#include "xAODTruth/TruthParticle.h"
 
 class TTree;
 namespace xAOD {
     class TEvent;
+    //class TruthParticle;
 }
 
 class TruthSelector : public TSelector
@@ -38,6 +34,7 @@ class TruthSelector : public TSelector
         void clearContainers();
         void saveOutputTree();
         void setDebug(int dbgLevel) { m_dbg = dbgLevel; }
+        void setWZ2WW(bool doit) { m_wz2ww = doit; }
 
         // TSelector methods
         virtual Int_t Version() const { return 2; }
@@ -46,11 +43,16 @@ class TruthSelector : public TSelector
         virtual void Begin(TTree* tree);                       
         virtual void SlaveBegin(TTree *tree);
         virtual void Terminate();                   
-        virtual Bool_t Process(Long64_t entry);     
-        
+        virtual Bool_t Process(Long64_t entry); 
+
+        xAOD::TruthParticle* getLeptonForMet(std::vector<xAOD::TruthParticle*>& v_mu,
+                                                std::vector<xAOD::TruthParticle*>& v_el);
+
 
         std::string m_inputSampleName;
         std::string m_outputFileName;
+
+        std::string timerSummary();
 
         
         //----------------------------------------
@@ -151,6 +153,51 @@ class TruthSelector : public TSelector
         double m_br_r1;
         double m_br_r1_S2L;
 
+        // r2
+        double m_br_r2;
+
+        // jet lepton vars
+        double m_br_dr_l0_j0;
+        double m_br_dr_l1_j0;
+        double m_br_dr_l0_bj0;
+        double m_br_dr_l0_lj0;
+
+        double m_br_dphi_l0_j0;
+        double m_br_dphi_l1_j0;
+        double m_br_dphi_l0_bj0;
+        double m_br_dphi_l0_lj0;
+
+        double m_br_dphi_ptLL_j0;
+        double m_br_dphi_ptLL_bj0;
+        double m_br_dphi_ptLL_lj0;
+
+        // met lepton vars
+        double m_br_dphi_l0_met;
+        double m_br_dphi_l1_met;
+
+        double m_br_dphi_ptLL_met;
+
+        double m_br_Rsib;
+
+        // met jet vars
+        double m_br_dphi_met_j0;
+        double m_br_dphi_met_bj0;
+        double m_br_dphi_met_lj0;
+
+        // WW-like vars
+        double m_br_deltaX;
+        double m_br_cosThetaB;
+
+        // super-razor
+        double m_br_shatr;
+        double m_br_DPB;
+        double m_br_dphi_l1_l2;
+        double m_br_MDR;
+        double m_br_cosThetaRp1;
+
+
+
+
 
     protected :
         TFile *m_outTreeFile;
@@ -158,6 +205,13 @@ class TruthSelector : public TSelector
         TTree *m_tree;
         xAOD::TEvent* m_event;
         int m_dbg;
+
+        bool m_wz2ww;
+
+        int n_evtProcessed;
+        int n_evtStored;
+
+        TStopwatch m_timer;
 
     ClassDef(TruthSelector, 0);
 
