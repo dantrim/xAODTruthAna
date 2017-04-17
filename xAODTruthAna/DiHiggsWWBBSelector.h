@@ -43,6 +43,12 @@ class DiHiggsWWBBSelector : public TruthSelectorBase
         double m_br_w0_mass;
         double m_br_w1_mass;
 
+        double m_br_dphi_ll;
+
+        double m_br_dphi_bb;
+
+        double m_br_dphi_ll_bb;
+
 
     ClassDef(DiHiggsWWBBSelector, 0);
 

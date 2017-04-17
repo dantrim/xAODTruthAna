@@ -132,6 +132,12 @@ void DiHiggsWWBBSelector::initialize_tree_branches(bool is_validation)
         tree->Branch("X_mass", &m_br_X_mass);
         tree->Branch("mW_0", &m_br_w0_mass);
         tree->Branch("mW_1", &m_br_w1_mass);
+
+        tree->Branch("dphi_ll", &m_br_dphi_ll);
+
+        tree->Branch("dphi_bb", &m_br_dphi_bb);
+
+        tree->Branch("dphi_ll_bb", &m_br_dphi_ll_bb);
     }
 
 }
@@ -150,6 +156,12 @@ void DiHiggsWWBBSelector::clear_variables()
 
     m_br_w0_mass = -1;
     m_br_w1_mass = -1;
+
+    m_br_dphi_ll = -5;
+
+    m_br_dphi_bb = -5;
+
+    m_br_dphi_ll_bb = -5;
 }
 //////////////////////////////////////////////////////////////////////////////
 void DiHiggsWWBBSelector::validation()
@@ -240,6 +252,12 @@ void DiHiggsWWBBSelector::validation()
 
         double h_mass_lvlv = -1;
 
+        double dphi_ll = -5;
+
+        double dphi_bb = bquarks.at(0)->p4().DeltaPhi(bquarks.at(1)->p4());
+
+        double dphi_ll_bb = -5;
+
         // dilepton
         if(wleptons.size()==2) {
             w_mass_0 = (wleptons.at(0)->p4() + wneutrinos.at(1)->p4()).M() * mev2gev;
@@ -249,9 +267,16 @@ void DiHiggsWWBBSelector::validation()
             h_mass_lvlv = (wleptons.at(0)->p4() + wneutrinos.at(1)->p4()
                             + wleptons.at(1)->p4() + wneutrinos.at(1)->p4()).M() * mev2gev;
 
+            // angles between leptons
+            dphi_ll = wleptons.at(0)->p4().DeltaPhi(wleptons.at(1)->p4());
 
+
+            // angles between dilepton and b-quark systems
+            dphi_ll_bb = (wleptons.at(0)->p4() + wleptons.at(1)->p4()).DeltaPhi(
+                            (bquarks.at(0)->p4() + bquarks.at(1)->p4()));
         }
 
+    
 
 
         ///////////////////////////////////////////////////
@@ -267,6 +292,12 @@ void DiHiggsWWBBSelector::validation()
 
         m_br_w0_mass = w_mass_0;
         m_br_w1_mass = w_mass_1;
+
+        m_br_dphi_ll = dphi_ll;
+
+        m_br_dphi_bb = dphi_bb;
+
+        m_br_dphi_ll_bb = dphi_ll_bb;
 
 
     }
