@@ -37,6 +37,22 @@ ClassImp(DiHiggsWWBBSelector)
 
 std::string ana = "DiHiggsWWBBSelector";
 
+struct IsPdg {
+    int pdg;
+    IsPdg(int p) : pdg(p) {}
+    bool operator()(const xAOD::TruthParticle *l) { return (l && l->absPdgId()==pdg); }
+};
+IsPdg isElectron(11), isMuon(13), isTau(15);
+
+bool is_ee(const xAOD::TruthParticle* l0, const xAOD::TruthParticle* l1)
+    { return isElectron(l0) and isElectron(l1); }
+
+bool is_mm(const xAOD::TruthParticle* l0, const xAOD::TruthParticle* l1)
+    { return isMuon(l0) and isMuon(l1); }
+
+bool is_em(const xAOD::TruthParticle* l0, const xAOD::TruthParticle* l1)
+    { return ((isElectron(l0) and isMuon(l1)) or (isMuon(l0) and isElectron(l1))); }
+
 //////////////////////////////////////////////////////////////////////////////
 DiHiggsWWBBSelector::DiHiggsWWBBSelector() :
     m_output_setup(false)
@@ -133,9 +149,16 @@ void DiHiggsWWBBSelector::initialize_tree_branches(bool is_validation)
         tree->Branch("mW_0", &m_br_w0_mass);
         tree->Branch("mW_1", &m_br_w1_mass);
 
+        tree->Branch("dileptonFlav", &m_br_dilepton_flavor);
+        tree->Branch("l_pdgId", &m_br_l_pdgId);
         tree->Branch("dphi_ll", &m_br_dphi_ll);
+        tree->Branch("pTll", &m_br_pTll);
+        tree->Branch("l_pt", &m_br_l_pt);
+        tree->Branch("l_eta", &m_br_l_eta);
 
         tree->Branch("dphi_bb", &m_br_dphi_bb);
+        tree->Branch("b_pt", &m_br_b_pt);
+        tree->Branch("b_eta", &m_br_b_eta);
 
         tree->Branch("dphi_ll_bb", &m_br_dphi_ll_bb);
     }
@@ -158,8 +181,15 @@ void DiHiggsWWBBSelector::clear_variables()
     m_br_w1_mass = -1;
 
     m_br_dphi_ll = -5;
+    m_br_pTll = -5;
+    m_br_dilepton_flavor = -1;
+    m_br_l_pdgId.clear();
+    m_br_l_pt.clear();
+    m_br_l_eta.clear();
 
     m_br_dphi_bb = -5;
+    m_br_b_pt.clear();
+    m_br_b_eta.clear();
 
     m_br_dphi_ll_bb = -5;
 }
@@ -242,8 +272,9 @@ void DiHiggsWWBBSelector::validation()
             } while (self_decay);
         } // iw
 
-        if(wleptons_arr[0]) wleptons.push_back(wleptons_arr[0]);
-        if(wleptons_arr[1]) wleptons.push_back(wleptons_arr[1]);
+        // only "light" leptons
+        if(wleptons_arr[0] && (wleptons_arr[0]->absPdgId()!=15)) wleptons.push_back(wleptons_arr[0]);
+        if(wleptons_arr[1] && (wleptons_arr[1]->absPdgId()!=15)) wleptons.push_back(wleptons_arr[1]);
         if(wneutrinos_arr[0]) wneutrinos.push_back(wneutrinos_arr[0]);
         if(wneutrinos_arr[1]) wneutrinos.push_back(wneutrinos_arr[1]);
 
@@ -258,8 +289,17 @@ void DiHiggsWWBBSelector::validation()
 
         double dphi_ll_bb = -5;
 
-        // dilepton
+        int flavor = -1;
         if(wleptons.size()==2) {
+            if(is_ee(wleptons.at(0), wleptons.at(1))) flavor = 0;
+            else if(is_mm(wleptons.at(0), wleptons.at(1))) flavor = 1;
+            else if(is_em(wleptons.at(0), wleptons.at(1))) flavor = 2;
+            else { flavor = 3; } // tau stuff
+            m_br_dilepton_flavor = flavor;
+        } // == 2
+
+        // dilepton
+        if(wleptons.size()==2 && flavor>= 0 && flavor <3) { // only light leptons
             w_mass_0 = (wleptons.at(0)->p4() + wneutrinos.at(1)->p4()).M() * mev2gev;
             w_mass_1 = (wleptons.at(1)->p4() + wneutrinos.at(1)->p4()).M() * mev2gev;
 
@@ -267,14 +307,37 @@ void DiHiggsWWBBSelector::validation()
             h_mass_lvlv = (wleptons.at(0)->p4() + wneutrinos.at(1)->p4()
                             + wleptons.at(1)->p4() + wneutrinos.at(1)->p4()).M() * mev2gev;
 
+            ////////////////////////////////
+            // dilepton
+            ////////////////////////////////
+
             // angles between leptons
             dphi_ll = wleptons.at(0)->p4().DeltaPhi(wleptons.at(1)->p4());
 
+            m_br_pTll = (wleptons.at(0)->p4() + wleptons.at(1)->p4()).Pt() * mev2gev;
+            
+            
+
+            for(int i = 0; i < 2; i++) {
+                m_br_l_pt.push_back(wleptons.at(i)->p4().Pt()*mev2gev);
+                m_br_l_eta.push_back(wleptons.at(i)->p4().Eta());
+                m_br_l_pdgId.push_back(wleptons.at(i)->absPdgId());
+            }
+
+            ///////////////////////////////
+            // di-b system
+            ///////////////////////////////
 
             // angles between dilepton and b-quark systems
             dphi_ll_bb = (wleptons.at(0)->p4() + wleptons.at(1)->p4()).DeltaPhi(
                             (bquarks.at(0)->p4() + bquarks.at(1)->p4()));
-        }
+
+            for(int i = 0; i < 2; i++) {
+                m_br_b_pt.push_back(bquarks.at(i)->p4().Pt()*mev2gev);
+                m_br_b_eta.push_back(bquarks.at(i)->p4().Eta());
+            }
+        
+        } // == 2 leptons
 
     
 

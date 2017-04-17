@@ -30,6 +30,23 @@ const double mev2gev = 1.0e-3;
         } \
     } while (false)
 
+//struct IsPdg {
+//    int pdg;
+//    IsPdg(int p) : pdg(p) {}
+//    bool operator()(const xAOD::TruthParticle *l) { return (l && l->absPdgId()==pdg); }
+//};
+//IsPdg isElectron(11), isMuon(13), isTau(15);
+//
+//bool is_ee(const xAOD::TruthParticle* l0, const xAOD::TruthParticle* l1)
+//    { return isElectron(l0) and isElectron(l1); }
+//
+//bool is_mm(const xAOD::TruthParticle* l0, const xAOD::TruthParticle* l1)
+//    { return isMuon(l0) and isMuon(l1); }
+//
+//bool is_em(const xAOD::TruthParticle* l0, const xAOD::TruthParticle* l1)
+//    { return ((isElectron(l0) and isMuon(l1)) or (isMuon(l0) and isElectron(l1))); }
+
+
 class TruthSelectorBase : public TSelector
 {
 

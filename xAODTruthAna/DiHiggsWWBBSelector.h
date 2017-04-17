@@ -44,8 +44,15 @@ class DiHiggsWWBBSelector : public TruthSelectorBase
         double m_br_w1_mass;
 
         double m_br_dphi_ll;
+        double m_br_pTll;
+        int m_br_dilepton_flavor;
+        std::vector<int> m_br_l_pdgId;
+        std::vector<double> m_br_l_pt;
+        std::vector<double> m_br_l_eta;
 
         double m_br_dphi_bb;
+        std::vector<double> m_br_b_pt;
+        std::vector<double> m_br_b_eta;
 
         double m_br_dphi_ll_bb;
 
