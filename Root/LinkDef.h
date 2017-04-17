@@ -1,4 +1,5 @@
-#include <xAODTruthAna/TruthSelector.h>
+#include <xAODTruthAna/TruthSelectorBase.h>
+#include <xAODTruthAna/DiHiggsWWBBSelector.h>
 
 #ifdef __CINT__
 
@@ -8,7 +9,8 @@
 #pragma link C++ nestedclass;
 #pragma linke C++ nestedtypedef;
 
-#pragma link C++ class TruthSelector+;
+#pragma link C++ class TruthSelectorBase+;
+#pragma link C++ class DiHiggsWWBBSelector+;
 
 #endif
 
