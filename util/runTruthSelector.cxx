@@ -26,6 +26,7 @@ void help()
          << "   -f|--filelist     default: fileList.txt"            << endl
          << "   -d|--dbg-level    default: 0 (quiet)"               << endl
          << "   -o|--outfile-name default: 'superTruth.root'"       << endl
+         << "   -v|--validation   default: false" << endl
     << endl;
 }
 
@@ -37,6 +38,7 @@ int main(int argc, char** argv)
     string inputSampleName = "";
     string fileList = "fileList.txt";
     string outputFileName = "superTruth.root";
+    bool do_validation = false;
 
     cout << "runTruthSelector" << endl;
     cout << endl;
@@ -49,6 +51,7 @@ int main(int argc, char** argv)
         else if (opt=="-f" || opt=="--filelist") { fileList = argv[++optin]; }
         else if (opt=="-d" || opt=="--dbg-level") { dbg = atoi(argv[++optin]); }
         else if (opt=="-o" || opt=="--outfile-name") { outputFileName = argv[++optin]; }
+        else if (opt=="-v" || opt=="--validation") { do_validation = true; }
         else {
             cout << "Unknown command line argument : '" << opt << "'" << endl;
             help();
@@ -81,6 +84,7 @@ int main(int argc, char** argv)
     susyAna->set_debug(dbg);
     susyAna->set_input_samplename(inputSampleName);
     susyAna->set_output_filename(outputFileName);
+    susyAna->set_validation(do_validation);
 
     if(nEvt<0) nEvt = nEntries;
     cout << endl;

@@ -35,10 +35,11 @@ TruthSelectorBase::TruthSelectorBase() :
     n_evt_processed(0),
     n_evt_stored(0),
     m_dbg(0),
+    m_validation(false),
     m_output_tree_file(NULL),
     m_output_tree(NULL),
     m_tree(NULL),
-    m_event(new xAOD::TEvent(xAOD::TEvent::kBranchAccess) ),
+    m_event(new xAOD::TEvent(xAOD::TEvent::kClassAccess) ),
     m_input_samplename(""),
     m_output_filename("")
 {

@@ -54,6 +54,9 @@ class TruthSelectorBase : public TSelector
         TruthSelectorBase();
         virtual ~TruthSelectorBase();
 
+        virtual void set_validation(bool doit) { m_validation = doit; }
+        bool validation() { return m_validation; }
+
         // TSelector
         virtual Int_t Version() const { return 2; }
         virtual void Init(TTree *tree);
@@ -91,6 +94,7 @@ class TruthSelectorBase : public TSelector
     private :
 
         int m_dbg;
+        bool m_validation;
 
         //TFile *m_output_tree_file;
         //TTree *m_output_tree;
