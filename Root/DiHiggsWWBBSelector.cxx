@@ -6,6 +6,7 @@
 #include <cstdio> // printf
 #include <sstream>
 #include <vector>
+#include <math.h> // sqrt, cos
 using namespace std;
 
 //ROOT
@@ -165,6 +166,7 @@ void DiHiggsWWBBSelector::init_ana_tree()
 
     tree->Branch("nLeptons", &m_br_n_leptons);
     tree->Branch("dileptonFlav", &m_br_dilepton_flavor);
+    tree->Branch("mll", &m_br_mll);
 
     // leptons
     tree->Branch("l_pt", &m_br_l_pt);
@@ -224,6 +226,12 @@ void DiHiggsWWBBSelector::init_ana_tree()
     tree->Branch("mass_met_ll", &m_br_mass_met_ll);
     tree->Branch("met_pTll", &m_br_met_pTll);
     tree->Branch("dphi_boost_ll_met", &m_br_dphi_boost_ll_met);
+    tree->Branch("MTCMS", &m_br_MT_CMS);
+    tree->Branch("MT_HWW", &m_br_MT_HWW);
+    tree->Branch("MT_1", &m_br_MT_1);
+    tree->Branch("MT_1_scaled", &m_br_MT_1_scaled);
+    tree->Branch("MT_2", &m_br_MT_2);
+    tree->Branch("MT_2_scaled", &m_br_MT_2_scaled);
 
     tree->Branch("HT2", &m_br_HT2);
     tree->Branch("HT2Ratio", &m_br_HT2Ratio);
@@ -795,6 +803,7 @@ Bool_t DiHiggsWWBBSelector::get_observables()
     m_br_cosThetaB = cosThetaB(v_lepton); // cosThetaB from 3-body
     m_br_cosTheta1 = cosTheta1(v_lepton);
     m_br_dphi_boost_ll = dphi_boost_ll(v_lepton);
+    m_br_mll = (v_lepton.at(0)->p4() + v_lepton.at(1)->p4()).M() * mev2gev;
     
     ///////////////////////////////////////////////
     // basic jet vars
@@ -854,6 +863,52 @@ Bool_t DiHiggsWWBBSelector::get_observables()
     m_br_cosTheta2 = cosTheta2(v_lepton, met_tlv);
     m_br_mass_met_ll = (met_tlv + v_lepton.at(0)->p4() + v_lepton.at(1)->p4()).M()*mev2gev;
     m_br_met_pTll = (met_tlv + v_lepton.at(0)->p4() + v_lepton.at(1)->p4()).Pt()*mev2gev;
+
+    m_br_MT_CMS = sqrt(2*m_br_pTll * m_br_met_et * (1 - cos(m_br_dphi_met_ll) ) );
+
+    double ptll2 = (v_lepton.at(0)->p4() + v_lepton.at(1)->p4()).Pt()*mev2gev;
+    ptll2 = ptll2 * ptll2;
+    double mll = (v_lepton.at(0)->p4() + v_lepton.at(1)->p4()).M() * mev2gev;
+    double ET_ll = sqrt(ptll2 + mll*mll);
+    double ptll_met = (v_lepton.at(0)->p4() + v_lepton.at(1)->p4() + met_tlv).Pt()*mev2gev;
+    m_br_MT_HWW = sqrt( (ET_ll + m_br_met_et)*(ET_ll + m_br_met_et) - (ptll_met * ptll_met) );
+
+    if(v_bjet.size()==2) {
+        // MT_1
+        TLorentzVector vis = (v_lepton.at(0)->p4() + v_lepton.at(1)->p4()
+                                + v_bjet.at(0)->p4() + v_bjet.at(1)->p4());
+        double pt_vis = vis.Pt() * mev2gev;
+        double m_vis = vis.M() * mev2gev;
+
+        double et_vis = sqrt(pt_vis * pt_vis + m_vis * m_vis);
+        m_br_MT_1 = sqrt( (et_vis + m_br_met_et) * (et_vis + m_br_met_et) -
+                        ( (vis + met_tlv).Pt() * mev2gev * (vis + met_tlv).Pt() * mev2gev ) );
+
+        // MT_2
+        double cos_vis = cos(vis.DeltaPhi(met_tlv));
+        m_br_MT_2 = sqrt(2 * pt_vis * m_br_met_et * (1 - cos_vis) );
+
+        // MT_1 scaled
+        double m_bb = (v_bjet.at(0)->p4() + v_bjet.at(1)->p4()).M() * mev2gev;
+        double sc = 125.09 / m_bb;
+
+        TLorentzVector bb_0 = (v_bjet.at(0)->p4() + v_bjet.at(1)->p4());
+        TLorentzVector bb;
+        bb.SetPtEtaPhiE(bb_0.Pt() * sc, bb_0.Eta(), bb_0.Phi(), bb_0.E() * sc);
+        TLorentzVector vis_sc = (v_lepton.at(0)->p4() + v_lepton.at(1)->p4() + bb);
+
+        pt_vis = vis_sc.Pt() * mev2gev;
+        m_vis = vis_sc.M() * mev2gev;
+        et_vis = sqrt(pt_vis * pt_vis + m_vis * m_vis);
+        m_br_MT_1_scaled = sqrt( (et_vis + m_br_met_et) * (et_vis + m_br_met_et) -
+                    ( (vis_sc + met_tlv).Pt() * mev2gev * (vis_sc + met_tlv).Pt() * mev2gev ) );
+
+        // MT_2_scaled
+        cos_vis = cos(vis_sc.DeltaPhi(met_tlv));
+        m_br_MT_2_scaled = sqrt(2 * pt_vis * m_br_met_et * (1 - cos_vis) );
+    
+    }
+
     m_br_dphi_boost_ll_met = dphi_boost_ll_met(v_lepton, met_tlv);
 
     if(v_bjet.size()>=2) {

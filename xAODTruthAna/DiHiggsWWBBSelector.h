@@ -86,6 +86,7 @@ class DiHiggsWWBBSelector : public TruthSelectorBase
         double m_br_cosTheta1;
         double m_br_cosTheta2;
         double m_br_dphi_boost_ll;
+        double m_br_mll;
 
         // jets
         int m_br_jet_n;
@@ -117,6 +118,13 @@ class DiHiggsWWBBSelector : public TruthSelectorBase
         double m_br_mass_met_ll;
         double m_br_met_pTll;
         double m_br_dphi_boost_ll_met;
+
+        double m_br_MT_CMS; // sqrt[2*pTll*MET*(1-cos(DPHI(LL,MET)))]
+        double m_br_MT_HWW;
+        double m_br_MT_1;
+        double m_br_MT_1_scaled;
+        double m_br_MT_2;
+        double m_br_MT_2_scaled;
 
         // lepton + b
         double m_br_dphi_met_bb;

@@ -90,6 +90,13 @@ def get_variables() :
     variables["HT2Ratio"] = [0.05, 0, 1]
     variables["HT2_noMET"] = [20, 0, 1200]
     variables["HT2Ratio_noMET"] = [0.05, 0, 1]
+    variables["MTCMS"] = [10, 0, 300]
+    variables["MT_HWW"] = [10, 0, 300]
+    variables["MT_1"] = [20,0,1200]
+    variables["MT_2"] = [10,0,800]
+    variables["MT_1_scaled"] = [20,0,1200]
+    variables["MT_2_scaled"] = [10,0,800]
+    variables["mll"] = [10,0,600]
 
     return variables
 
