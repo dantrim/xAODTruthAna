@@ -62,28 +62,29 @@ void TruthSelectorBase::Init(TTree *tree)
         exit(1);
     }
     m_tree = tree;
+    m_event->readFrom(tree);
     return;
 }
 //////////////////////////////////////////////////////////////////////////////
 Bool_t TruthSelectorBase::Notify()
 {
-    string fn = "TruthSelectorBase::Notify    ";
-    if(!m_tree) {
-        cout << fn << "ERROR Tree is null!" << endl;
-        return kTRUE;
-    }
-    cout << fn << "Opening a new file" << endl;
-    TFile* ifile = 0;
-    TChain* chain = dynamic_cast<TChain*>(m_tree);
-    if(chain) {
-        ifile = chain->GetFile();
-        cout << fn << "chain : " << ifile->GetName() << endl;
-    }
-    else {
-        ifile = m_tree->GetCurrentFile();
-        cout << fn << "not chain : " << ifile->GetName() << endl;
-    }
-    RETURN_CHECK(GetName(), m_event->readFrom(ifile, kFALSE) );
+ //   string fn = "TruthSelectorBase::Notify    ";
+ //   if(!m_tree) {
+ //       cout << fn << "ERROR Tree is null!" << endl;
+ //       return kTRUE;
+ //   }
+ //   cout << fn << "Opening a new file" << endl;
+ //   TFile* ifile = 0;
+ //   TChain* chain = dynamic_cast<TChain*>(m_tree);
+ //   if(chain) {
+ //       ifile = chain->GetFile();
+ //       cout << fn << "chain : " << ifile->GetName() << endl;
+ //   }
+ //   else {
+ //       ifile = m_tree->GetCurrentFile();
+ //       cout << fn << "not chain : " << ifile->GetName() << endl;
+ //   }
+ //   RETURN_CHECK(GetName(), m_event->readFrom(ifile, kFALSE) );
     return kTRUE;
 }
 //////////////////////////////////////////////////////////////////////////////

@@ -57,13 +57,13 @@ struct PtGreaterJet {
     bool operator()(const xAOD::Jet* a, const xAOD::Jet* b) { return a->pt()>b->pt(); }
 } byPtJet;
 
-bool is_ee(const xAOD::TruthParticle* l0, const xAOD::TruthParticle* l1)
+bool isEE(const xAOD::TruthParticle* l0, const xAOD::TruthParticle* l1)
     { return isElectron(l0) and isElectron(l1); }
 
-bool is_mm(const xAOD::TruthParticle* l0, const xAOD::TruthParticle* l1)
+bool isMM(const xAOD::TruthParticle* l0, const xAOD::TruthParticle* l1)
     { return isMuon(l0) and isMuon(l1); }
 
-bool is_em(const xAOD::TruthParticle* l0, const xAOD::TruthParticle* l1)
+bool isEM(const xAOD::TruthParticle* l0, const xAOD::TruthParticle* l1)
     { return ((isElectron(l0) and isMuon(l1)) or (isMuon(l0) and isElectron(l1))); }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -452,9 +452,9 @@ void DiHiggsWWBBSelector::validation_observables()
 
         int flavor = -1;
         if(wleptons.size()==2) {
-            if(is_ee(wleptons.at(0), wleptons.at(1))) flavor = 0;
-            else if(is_mm(wleptons.at(0), wleptons.at(1))) flavor = 1;
-            else if(is_em(wleptons.at(0), wleptons.at(1))) flavor = 2;
+            if(isEE(wleptons.at(0), wleptons.at(1))) flavor = 0;
+            else if(isMM(wleptons.at(0), wleptons.at(1))) flavor = 1;
+            else if(isEM(wleptons.at(0), wleptons.at(1))) flavor = 2;
             else { flavor = 3; } // tau stuff
             m_br_dilepton_flavor = flavor;
         } // == 2

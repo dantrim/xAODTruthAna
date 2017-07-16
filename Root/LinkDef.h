@@ -11,6 +11,7 @@
 
 #pragma link C++ class TruthSelectorBase+;
 #pragma link C++ class DiHiggsWWBBSelector+;
+//#pragma link C++ class DiHiggsAcceptance+;
 
 #endif
 
