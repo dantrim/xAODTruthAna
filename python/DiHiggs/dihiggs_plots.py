@@ -36,6 +36,7 @@ class Sample() :
 def get_variables() :
 
     variables = {}
+    """
     variables["l_pt[0]"] = [5, 0, 300]
     variables["l_pt[1]"] = [5, 0, 300]
     variables["l_eta[0]"] = [0.2, -3, 3]
@@ -69,7 +70,6 @@ def get_variables() :
         name = "bj_eta[%d]"%i
         variables[name] = [0.5, -5,5]
 
-    variables["mass_bb"] = [5,0,350]
     variables["dRbb"] = [0.2, 0, 6]
     variables["dphi_bb"] = [0.1, 0, 3.2]
     variables["abs(dphi_ll_bb)"] = [0.1, 0, 3.2]
@@ -97,6 +97,23 @@ def get_variables() :
     variables["MT_1_scaled"] = [20,0,1200]
     variables["MT_2_scaled"] = [10,0,800]
     variables["mll"] = [10,0,600]
+    variables["mt2"] = [5, 0, 140]
+    variables["h_maos_1"] = [ 5, 0, 400]
+    variables["mass_X_maos"] = [20, 100, 1300]
+    """
+    variables["mt2_00"] = [20, 0, 1000]
+    variables["mt2_01"] = [10, 0, 800]
+    variables["mt2_10"] = [10, 0, 800]
+    variables["mt2_ll_bb"] = [2, 0, 300]
+    variables["mt2_ll_bb_scaled"] = [2,0,300]
+    variables["mass_bb"] = [5,0,350]
+    variables["mt2_bb"] = [10,0,800]
+    variables["mt2_bvis"] = [10,0,600]
+    variables["mt2_lvis"] = [10, 0, 600]
+    variables["mT_llmet"] = [20,0,1200]
+    variables["mT_bb"] = [10, 0, 500]
+    variables["min_mT_llmet_bb"] = [10,0,700]
+    variables["max_mT_llmet_bb"] = [20,0,2000]
 
     return variables
 
@@ -133,7 +150,8 @@ def make_plot(samples, var, bounds) :
 
     c.SetGrid(1,1)
 
-    selection = "nLeptons==2 && n_bjet==2"
+    selection = "nLeptons==2 && n_bjet==2 && mt2_ll_bb>80 && mt2_ll_bb<135"
+    #selection = "nLeptons==2 && n_bjet==2 && n_jet==2 && mass_bb>85 && mass_bb < 140 && HT2Ratio>0.75"# &&  HT2Ratio>0.7 && abs(mass_bb-125)<20" # april 21
     #selection = "nLeptons==2 && n_bjet==2 && abs(mass_bb - 125.09) < 20 && abs(dphi_met_ll)<1.5" 
     #selection = "nLeptons==2 && n_bjet==2 && HT2Ratio>0.7 && abs(dphi_met_ll)<1.2 && dRll<1.2 && dRll>0.2"
 

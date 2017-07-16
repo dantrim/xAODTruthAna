@@ -31,6 +31,7 @@ using namespace std;
 
 // ana
 #include "xAODTruthAna/xaod_utils.h"
+#include "xAODTruthAna/MT2_ROOT.h"
 
 
 //mystery ROOT macro
@@ -203,6 +204,10 @@ void DiHiggsWWBBSelector::init_ana_tree()
     tree->Branch("bj_pt", &m_br_bj_pt);
     tree->Branch("bj_eta", &m_br_bj_eta);
     tree->Branch("mass_bb", &m_br_mass_bb);
+    tree->Branch("mass_bb_scaled", &m_br_mass_bb_scaled);
+    tree->Branch("bpz1", &m_br_pbz1);
+    tree->Branch("bpz2", &m_br_pbz2);
+    tree->Branch("pbbz", &m_br_pbbz);
 
     // double b
     tree->Branch("dRbb", &m_br_dR_bb);
@@ -238,6 +243,27 @@ void DiHiggsWWBBSelector::init_ana_tree()
 
     tree->Branch("HT2_noMET", &m_br_HT2_noMET);
     tree->Branch("HT2Ratio_noMET", &m_br_HT2Ratio_noMET);
+
+    // MAOS
+    tree->Branch("mt2", &m_br_mt2);
+    tree->Branch("mt2_00", &m_br_mt2_00);
+    tree->Branch("mt2_01", &m_br_mt2_01);
+    tree->Branch("mt2_10", &m_br_mt2_10);
+    tree->Branch("mt2_ll_bb", &m_br_mt2_ll_bb);
+    tree->Branch("mt2_ll_bb_scaled", &m_br_mt2_ll_bb_scaled);
+    tree->Branch("mt2_bb", &m_br_mt2_bb);
+    tree->Branch("mt2_bvis", &m_br_mt2_bvis);
+    tree->Branch("mt2_lvis", &m_br_mt2_lvis);
+
+    tree->Branch("mT_llmet", &m_br_mT_llmet);
+    tree->Branch("mT_bb", &m_br_mT_bb);
+    tree->Branch("min_mT_llmet_bb", &m_br_min_mT_llmet_bb);
+    tree->Branch("max_mT_llmet_bb", &m_br_max_mT_llmet_bb);
+
+    tree->Branch("mt2_boost", &m_br_mt2_boost);
+    tree->Branch("h_maos_1", &m_br_h_maos_1);
+    tree->Branch("h_maos_2", &m_br_h_maos_2);
+    tree->Branch("mass_X_maos", &m_br_mass_X_maos);
 
 }
 //////////////////////////////////////////////////////////////////////////////
@@ -843,7 +869,47 @@ Bool_t DiHiggsWWBBSelector::get_observables()
         m_br_dR_ll_bb = (v_lepton.at(0)->p4() + v_lepton.at(1)->p4()).
                             DeltaR((v_bjet.at(0)->p4() + v_bjet.at(1)->p4()));
         m_br_mass_bb = (v_bjet.at(0)->p4() + v_bjet.at(1)->p4()).M()*mev2gev;
+        double sc = 125.09 / m_br_mass_bb;
+        TLorentzVector bb = (v_bjet.at(0)->p4() + v_bjet.at(1)->p4());
+        bb.SetPtEtaPhiE(bb.Pt() * sc, bb.Eta(), bb.Phi(), bb.E() * sc);
+        m_br_mass_bb_scaled = bb.M() * mev2gev;
+
+        //cout << "mbb: " << m_br_mass_bb << " scale: " << sc << " bbe: " << bbe  << " bbpt: " << bbpt
+        //    << "  bbpz: " << m_br_pbbz<< "  scaled mass_bb: " << m_br_mass_bb_scaled <<  endl;
+        //cout << " E2 - p2 = " << (bbe*bbe - (bb.Px()*mev2gev)*(bb.Px()*mev2gev) - (bb.Py()*mev2gev)*(bb.Py()*mev2gev) - (bb.Pz()*mev2gev)*(bb.Pz()*mev2gev)) << "  " << (bb.M()*mev2gev)*(bb.M()*mev2gev) << endl;
     }
+/*
+    if(v_bjet.size()>=2) {
+        TLorentzVector b0 = v_bjet.at(0)->p4();
+        TLorentzVector b1 = v_bjet.at(1)->p4();
+        TLorentzVector bb = (b0 + b1);
+
+        double e = bb.E();
+        double px = bb.Px();
+        double py = bb.Py();
+        double pz = bb.Pz();
+
+        cout << "BEFORE:  E2 - p2 = " << (e*e - px*px - py*py - pz*pz) << "  ROOT: " << bb.M2() << "   pz: " << pz << endl;
+
+        double sc = (125.09 / ( bb.M() * mev2gev ) );
+        TLorentzVector bbscaled = (b0 + b1);
+        //bbscaled.SetPtEtaPhiE(bbscaled.Pt() * sc, bbscaled.Eta(), bbscaled.Phi(), bbscaled.E() * sc);
+        double scaled_pt = sc * bb.Pt();
+        double scaled_e = sc * bb.E();
+        bbscaled.SetPx( scaled_pt * TMath::Cos(bbscaled.Phi()));
+        bbscaled.SetPy( scaled_pt * TMath::Sin(bbscaled.Phi()));
+        bbscaled.SetE( scaled_e );
+
+        double es = bbscaled.E();
+        double pxs = bbscaled.Px();
+        double pys = bbscaled.Py();
+        double pzs = bbscaled.Pz();
+
+        cout << "AFTER:  E2 - p2 = " << (es*es - pxs*pxs - pys*pys - pzs*pzs) << " (scale: " << sc 
+                << ", e: " << es << ", x: " << pxs << " , y: " << pys << " , z: " << pzs << ")   ROOT: " << bbscaled.M2() << "  pz: " << pzs << endl; 
+
+    }
+*/
 
     ///////////////////////////////////////////////
     // met related
@@ -955,7 +1021,254 @@ Bool_t DiHiggsWWBBSelector::get_observables()
     }
 
 
+    // MAOS
+    if(v_bjet.size()==2){ // && v_jet.size()==2) {
+
+        // total
+        TLorentzVector total_system_T = (v_lepton.at(0)->p4() + v_lepton.at(1)->p4() + v_bjet.at(0)->p4()
+                    + v_bjet.at(1)->p4());
+        total_system_T.SetPz(0.0);
+        TVector3 total_boost = total_system_T.BoostVector();
+
+        TLorentzVector bjet_system = (v_bjet.at(0)->p4() + v_bjet.at(1)->p4());
+        bjet_system.SetPtEtaPhiE(bjet_system.Pt() * (125.09/(bjet_system.M() * mev2gev)), 
+                                bjet_system.Eta(),
+                                bjet_system.Phi(),
+                                bjet_system.E() * (125.09 / (bjet_system.M() * mev2gev)));
+
+        TLorentzVector l0 = v_lepton.at(0)->p4();
+        TLorentzVector l1 = v_lepton.at(1)->p4();
+
+        TLorentzVector met = met_tlv;
+
+        // calculate mt2
+        ComputeMT2 calc0 = ComputeMT2(l0, l1, met, 0., 0.);
+        double mt2 = calc0.Compute();
+        m_br_mt2 = mt2 * mev2gev;
+
+        // mt2_00
+        TLorentzVector lm0 = v_lepton.at(0)->p4();
+        TLorentzVector lm1 = v_lepton.at(1)->p4();
+        TLorentzVector lb0 = v_bjet.at(0)->p4();
+        TLorentzVector lb1 = v_bjet.at(1)->p4();
+        ComputeMT2 c00 = ComputeMT2( (lm0 + lb0), (lm1 + lb1), met, 0., 0.);
+        ComputeMT2 c01 = ComputeMT2( (lm0 + lb1), (lm1 + lb0), met, 0., 0.);
+        ComputeMT2 c10 = ComputeMT2( (lm1 + lb0), (lm0 + lb1), met, 0., 0.);
+        ComputeMT2 cll_bb = ComputeMT2( (lm0 + lm1), (lb0 + lb1), met, 0., 0.);
+        TLorentzVector bj_sys = (v_bjet.at(0)->p4() + v_bjet.at(1)->p4());
+        double sc = 125.09 / (bj_sys.M() * mev2gev);
+        bj_sys.SetPtEtaPhiE(bj_sys.Pt() * sc, bj_sys.Eta(), bj_sys.Phi(), bj_sys.E() * sc);
+
+        ComputeMT2 cll_bb_scaled = ComputeMT2( (lm0 + lm1), bj_sys, met, 0., 0.);
+
+        m_br_mt2_00 = c00.Compute() * mev2gev; 
+        m_br_mt2_01 = c01.Compute() * mev2gev;
+        m_br_mt2_10 = c10.Compute() * mev2gev;
+        m_br_mt2_ll_bb = cll_bb.Compute() * mev2gev;
+        m_br_mt2_ll_bb_scaled = cll_bb_scaled.Compute() * mev2gev;
+
+        // mt2_bb
+        ComputeMT2 cbb = ComputeMT2( v_bjet.at(0)->p4(), v_bjet.at(1)->p4(), met, 0., 0.);
+        m_br_mt2_bb = cbb.Compute() * mev2gev;
+
+        // mt2_bvis
+        TLorentzVector l0t = v_lepton.at(0)->p4();
+        TLorentzVector l1t = v_lepton.at(1)->p4();
+        l0t.SetPtEtaPhiE(l0t.Pt(), 0., l0t.Phi(), l0t.E());
+        l1t.SetPtEtaPhiE(l1t.Pt(), 0., l1t.Phi(), l1t.E());
+        ComputeMT2 cbvis = ComputeMT2( v_bjet.at(0)->p4(), v_bjet.at(1)->p4(), (met + l0t + l1t), 0., 0.); 
+        m_br_mt2_bvis = cbvis.Compute() * mev2gev;
+
+        // mt2_lvis
+        TLorentzVector b0t = v_bjet.at(0)->p4();
+        TLorentzVector b1t = v_bjet.at(1)->p4();
+        b0t.SetPtEtaPhiE(b0t.Pt(), 0., b0t.Phi(), b0t.E());
+        b1t.SetPtEtaPhiE(b1t.Pt(), 0., b1t.Phi(), b1t.E());
+        ComputeMT2 clvis = ComputeMT2( v_lepton.at(0)->p4(), v_lepton.at(1)->p4(), (met + b0t + b1t), 0., 0.);
+        m_br_mt2_lvis = clvis.Compute() * mev2gev;
+
+        // mT_llmet
+        TLorentzVector llt = (l0t + l1t);
+        TLorentzVector lltmet = llt + met;
+        m_br_mT_llmet = lltmet.M() * mev2gev;
+
+        // mT_bb
+        TLorentzVector bbt = (b0t + b1t);
+        m_br_mT_bb = bbt.M() * mev2gev;
+
+        // min/max
+        if(m_br_mT_llmet > m_br_mT_bb) {
+            m_br_max_mT_llmet_bb = m_br_mT_llmet;
+            m_br_min_mT_llmet_bb = m_br_mT_bb;
+        }
+        else {
+            m_br_max_mT_llmet_bb = m_br_mT_bb;
+            m_br_min_mT_llmet_bb = m_br_mT_llmet;
+        }
+
+
+        // boost WW system against bb system
+        l0.Boost(-total_boost);
+        l1.Boost(-total_boost);
+        bjet_system.Boost(-total_boost);
+        met.Boost(-total_boost);
+        TLorentzVector bb_T = bjet_system;
+        bb_T.SetPz(0.0);
+        TVector3 bb_T_boost = bb_T.BoostVector();
+        l0.Boost(-bb_T_boost);
+        l1.Boost(-bb_T_boost);
+        met.Boost(-bb_T_boost);
+
+        // CM of leps and met
+        TLorentzVector lepmet_T = (l0 + l1 + met);
+        lepmet_T.SetPz(0.0);
+        TVector3 boost_H = lepmet_T.BoostVector();
+        l0.Boost(-boost_H);
+        l1.Boost(-boost_H);
+        met.Boost(-boost_H);
+
+        
+
+        // calculate mt2
+        ComputeMT2 calc1 = ComputeMT2(l0, l1, met, 0., 0.);
+        m_br_mt2_boost = calc1.Compute() * mev2gev;
+
+        /*
+        TLorentzVector nu0;
+        TLorentzVector nu1;
+
+        double nu0_T = (mt2 * mt2) / (2 * l0.Vect().Mag());
+        double nu0_L = (nu0_T * l1.Pz()) / ( l1.Pt() );
+
+        double nu1_T = (mt2 * mt2) / (2 * l1.Vect().Mag());
+        double nu1_L = (nu1_T * l0.Pz()) / (l0.Pt() );
+
+        nu0.SetPtEtaPhiM(nu0_T, 0., -l0.Phi(), 0.);
+        nu0.SetPz(nu0_L);
+
+        nu1.SetPtEtaPhiM(nu1_T, 0., -l1.Phi(), 0.);
+        nu1.SetPz(nu1_L);
+
+        TLorentzVector W0 = (l0 + nu0);
+        TLorentzVector W1 = (l1 + nu1);
+
+        TLorentzVector nn = nu0 + nu1;
+        nn.SetPx(met_tlv.Px());
+        nn.SetPy(met_tlv.Py());
+
+
+        m_br_h_maos_1 = (l0 + l1 + nn).M() * mev2gev;
+        //TLorentzVector W0_1 = (l0 + nu1);
+        //TLorentzVector W1_1 = (l0 + nu0);
+        //m_br_h_maos_2 = (W0_1 + W1_1).M() * mev2gev;
+        */
+
+
+        ///////////////////////
+        // MAOS 1
+        ///////////////////////
+        TLorentzVector nu0_1;
+        TLorentzVector nu1_1;
+
+        double px_0 = -l1.Px();
+        double py_0 = -l1.Py();
+        double px_1 = -l0.Px();
+        double py_1 = -l0.Py();
+
+
+        double pz_0 = (l1.Pt() * l0.Pz()) / (l0.Pt()); 
+        double pz_1 = (l0.Pt() * l1.Pz()) / (l1.Pt());
+
+        double e0 = sqrt(px_0 * px_0 + py_0 * py_0 + pz_0 * pz_0);
+        double e1 = sqrt(px_1 * px_1 + py_1 * py_1 + pz_1 * pz_1);
+
+        nu0_1.SetPxPyPzE(px_0, py_0, pz_0, e0);
+        nu1_1.SetPxPyPzE(px_1, py_1, pz_1, e1);
+
+        //cout << " leps : " << (l0 + l1).Pt() * mev2gev << "  met: " << (met_tlv).Pt() * mev2gev << "  bjets: " << (bjet_system.Pt() * mev2gev) << endl;
+        //cout << " neus : " << (nu0_1 + nu1_1).Pt() * mev2gev << "  met - bs: " << ( met_tlv - bjet_system).Pt()*mev2gev << "  all vis : " << (l0 + l1 + bjet_system + met_tlv).Pt() * mev2gev << endl;
+
+        TLorentzVector h = (l0 + l1 + nu0_1 + nu1_1);
+        m_br_h_maos_1 = h.M() * mev2gev;
+
+        TLorentzVector leps = (v_lepton.at(0)->p4() + v_lepton.at(1)->p4());
+        TLorentzVector bs = (v_bjet.at(0)->p4() + v_bjet.at(1)->p4());
+
+        nu0_1.Boost(boost_H);
+        nu0_1.Boost(bb_T_boost);
+        nu0_1.Boost(total_boost);
+
+        nu1_1.Boost(boost_H);
+        nu1_1.Boost(bb_T_boost);
+        nu1_1.Boost(total_boost);
+
+        TLorentzVector neus = (nu0_1 + nu1_1);
+
+        m_br_mass_X_maos = (leps + bs + neus).M() * mev2gev;
+        
+
+        /*
+        // longitudinal momenta of neutrinos
+        double nu0_L = (std::abs(l0.Pt()) / std::abs(l1.Pt()) ) * l1.Pz();
+        double nu1_L = (std::abs(l1.Pt()) / std::abs(l0.Pt()) ) * l0.Pz();
+
+        double px0 = -l1.Px();
+        double py0 = -l1.Py();
+        double e0 = sqrt(px0 * px0 + py0 * py0 + nu0_L * nu0_L);
+
+        double px1 = -l1.Px();
+        double py1 = -l1.Py();
+        double e1 = sqrt(px1 * px1 + py1 * py1 + nu1_L * nu1_L);
+
+        nu0_1.SetPxPyPzE( px0, py0, nu0_L, e0 );
+        nu1_1.SetPxPyPzE( px1, py1, nu1_L, e1 );
+
+        // now have neutrionos and leptons
+        TLorentzVector W1_1 = (l0 + nu0_1);
+        TLorentzVector W2_1 = (l1 + nu1_1);
+
+        // blah
+        TLorentzVector met_2 = met_tlv;
+        met_tlv.SetPz( nu0_1.Pz() + nu1_1.Pz() );
+        m_br_h_maos_1 = (l0 + l1 + met_tlv).M() * mev2gev;
+
+        //m_br_h_maos_1 = (W1_1 + W2_1).M() * mev2gev;
+        */
+        /*
+        ///////////////////////
+        // MAOS 2
+        ///////////////////////
+        TLorentzVector nu0_2;
+        TLorentzVector nu1_2;
+
+        // longitudinal momenta of neutrinos
+        double nu0_L2 = (std::abs(l1.Pt()) / std::abs(l0.Pt()) ) * l0.Pz();
+        double nu1_L2 = (std::abs(l0.Pt()) / std::abs(l1.Pt()) ) * l1.Pz();
+
+        double px0_2 = -l1.Px();
+        double py0_2 = -l1.Py();
+        double e02 = sqrt(px0_2 * px0_2 + py0_2 * py0_2 + nu0_L2 * nu0_L2);
+
+        double px1_2 = -l0.Px();
+        double py1_2 = -l0.Py();
+        double e12 = sqrt(px1_2 * px1_2 + py1_2 * py1_2 + nu1_L2 * nu1_L2);
+
+        nu0_2.SetPxPyPzE( px0_2, py0_2, nu0_L2, e02 );
+        nu1_2.SetPxPyPzE( px1_2, py1_2, nu1_L2, e12 );
+
+        // now have neutrionos and leptons
+        TLorentzVector W1_2 = (l1 + nu0_2);
+        TLorentzVector W2_2 = (l0 + nu1_2);
+
+        m_br_h_maos_2 = (W1_2 + W2_2).M() * mev2gev;
+        */
+
+    } // 2 b-jets
+
+
+
     // FILL THE OUTPUT TREE
+    n_evt_stored++;
     output_tree()->Fill();
     return kTRUE;
 }

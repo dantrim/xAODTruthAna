@@ -108,6 +108,10 @@ class DiHiggsWWBBSelector : public TruthSelectorBase
         std::vector<double> m_br_bj_pt;
         std::vector<double> m_br_bj_eta;
         double m_br_mass_bb;
+        double m_br_mass_bb_scaled;
+        double m_br_pbz1;
+        double m_br_pbz2;
+        double m_br_pbbz;
 
         // met
         double m_br_met_et;
@@ -142,6 +146,29 @@ class DiHiggsWWBBSelector : public TruthSelectorBase
 
         double m_br_HT2_noMET;
         double m_br_HT2Ratio_noMET;
+
+
+        // MAOS
+        double m_br_mt2;
+        double m_br_mt2_00;
+        double m_br_mt2_01;
+        double m_br_mt2_10;
+        double m_br_mt2_ll_bb; 
+        double m_br_mt2_ll_bb_scaled;
+
+        double m_br_mt2_bb;
+        double m_br_mt2_bvis;
+        double m_br_mt2_lvis;
+
+        double m_br_mT_llmet;
+        double m_br_mT_bb;
+        double m_br_min_mT_llmet_bb;
+        double m_br_max_mT_llmet_bb;
+
+        double m_br_mt2_boost;
+        double m_br_h_maos_1;
+        double m_br_h_maos_2;
+        double m_br_mass_X_maos;
 
     ClassDef(DiHiggsWWBBSelector, 0);
 
