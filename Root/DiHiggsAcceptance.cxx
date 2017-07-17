@@ -6,6 +6,7 @@
 #include <sstream>
 #include <vector>
 #include <math.h> // sqrt, cos
+#include <fstream>
 using namespace std;
 
 
@@ -57,14 +58,40 @@ bool is_em(const xAOD::TruthParticle* l0, const xAOD::TruthParticle* l1)
 //////////////////////////////////////////////////////////////////////////////
 DiHiggsAcceptance::DiHiggsAcceptance() :
     m_x_mass(0),
+    m_weight(1.0),
     n_events_non_dilepton(0),
     n_events_non_dilepton_less(0),
-    n_events_non_dilepton_more(0)
+    n_events_non_dilepton_more(0),
+    m_outfile(nullptr),
+    file_setup(false),
+    total_sumw(0.0),
+    m_xsec(0.0),
+    m_sumw(0.0)
 {
     cout << ANA << endl;
+
+
     for(unsigned int i = 0; i < DiLepType::Invalid; i++) {
         total_counts[i] = 0;
         passed_counts[i] = 0;
+        total_w[i] = 0.0;
+        passed_w[i] = 0.0;
+
+        string histtype = "";
+        if(i==DiLepType::EE) histtype = "EE";
+        else if(i==DiLepType::MM) histtype = "MM";
+        else if(i==DiLepType::EM) histtype = "EM";
+        else if(i==DiLepType::ALL) histtype = "ALL";
+        stringstream hname;
+        stringstream htitle;
+        hname << "h_total_w_" << histtype;
+        htitle << "Total W (" << histtype << ");W;Entries";
+        total_wh[i] = new TH1D(hname.str().c_str(), htitle.str().c_str(), 100, -0.4, 0.4);
+        hname.str("");
+        htitle.str("");
+        hname << "h_passed_w_" << histtype;
+        htitle << "Passed W (" << histtype << ");W;Entries";
+        passed_wh[i] = new TH1D(hname.str().c_str(), htitle.str().c_str(), 100,  -0.4, 0.4);
     }
 }
 //////////////////////////////////////////////////////////////////////////////
@@ -91,32 +118,32 @@ void DiHiggsAcceptance::print_counts()
     sx << "==================== COUNTS SUMMARY ======================\n";
     sx << "COUNTS " << x_mass() << "\n";
     sx << "COUNTS - - - - - - - - - - - - - - - - -\n";
-    sx << "COUNTS EE TOTAL READ IN = " << total_counts[DiLepType::EE] << "\n";
-    sx << "COUNTS EE TOTAL PASSED  = " << passed_counts[DiLepType::EE] << "\n";
+    sx << "COUNTS EE TOTAL READ IN = " << total_w[DiLepType::EE] << "  [" << total_counts[DiLepType::EE] << "]\n";
+    sx << "COUNTS EE TOTAL PASSED  = " << passed_w[DiLepType::EE] << "  [" << passed_counts[DiLepType::EE] << "]\n";
     if(total_counts[DiLepType::EE]>0)
-    sx << "COUNTS EE ACCEPTANCE    = " << (float)passed_counts[DiLepType::EE]/(float)total_counts[DiLepType::EE] << "\n";    
+    sx << "COUNTS EE ACCEPTANCE    = " << passed_w[DiLepType::EE]/total_w[DiLepType::EE] << "  [" << (float)passed_counts[DiLepType::EE]/(float)total_counts[DiLepType::EE] << "]\n";    
     else {
     sx << "COUNTS EE ACCEPTANCE    = -1\n"; 
     }
     sx << "COUNTS - - - - - - - - - - - - - - - - -\n";
-    sx << "COUNTS MM TOTAL READ IN = " << total_counts[DiLepType::MM] << "\n";
-    sx << "COUNTS MM TOTAL PASSED  = " << passed_counts[DiLepType::MM] << "\n";
+    sx << "COUNTS MM TOTAL READ IN = " << total_w[DiLepType::MM] << "  [" << total_counts[DiLepType::MM] << "]\n";
+    sx << "COUNTS MM TOTAL PASSED  = " << passed_w[DiLepType::MM] << "  [" << passed_counts[DiLepType::MM] << "]\n";
     if(total_counts[DiLepType::MM]>0)
-    sx << "COUNTS MM ACCEPTANCE    = " << (float)passed_counts[DiLepType::MM]/(float)total_counts[DiLepType::MM] << "\n";
+    sx << "COUNTS MM ACCEPTANCE    = " << passed_w[DiLepType::MM] / total_w[DiLepType::MM] << "  [" << (float)passed_counts[DiLepType::MM]/(float)total_counts[DiLepType::MM] << "]\n";
     else
     sx << "COUNTS MM ACCEPTANCE    = -1\n";
     sx << "COUNTS - - - - - - - - - - - - - - - - -\n";
-    sx << "COUNTS EM TOTAL READ IN = " << total_counts[DiLepType::EM] << "\n";
-    sx << "COUNTS EM TOTAL PASSED  = " << passed_counts[DiLepType::EM] << "\n";
+    sx << "COUNTS EM TOTAL READ IN = " << total_w[DiLepType::EM] << "  [" << total_counts[DiLepType::EM] << "]\n";
+    sx << "COUNTS EM TOTAL PASSED  = " << passed_w[DiLepType::EM] << "  [" << passed_counts[DiLepType::EM] << "]\n";
     if(total_counts[DiLepType::EM]>0)
-    sx << "COUNTS EM ACCEPTANCE    = " << (float)passed_counts[DiLepType::EM]/(float)total_counts[DiLepType::EM] << "\n";
+    sx << "COUNTS EM ACCEPTANCE    = " << passed_w[DiLepType::EM] / total_w[DiLepType::EM] << "  [" << (float)passed_counts[DiLepType::EM]/(float)total_counts[DiLepType::EM] << "]\n";
     else
     sx << "COUNTS EM ACCEPTANCe    = -1\n";
     sx << "COUNTS - - - - - - - - - - - - - - - - -\n";
-    sx << "COUNTS ALL TOTAL READ IN= " << total_counts[DiLepType::ALL] << "\n";
-    sx << "COUNTS ALL PASSED       = " << passed_counts[DiLepType::ALL] << "\n";
+    sx << "COUNTS ALL TOTAL READ IN= " << total_w[DiLepType::ALL] << "  [" << total_counts[DiLepType::ALL] << "]\n";
+    sx << "COUNTS ALL PASSED       = " << passed_w[DiLepType::ALL] << "  [" << passed_counts[DiLepType::ALL] << "]\n";
     if(total_counts[DiLepType::ALL]>0)
-    sx << "COUNTS ALL ACCEPTANCE   = " << (float)passed_counts[DiLepType::ALL]/(float)total_counts[DiLepType::ALL] << "\n";
+    sx << "COUNTS ALL ACCEPTANCE   = " << passed_w[DiLepType::ALL] / total_w[DiLepType::ALL] << "  [" << (float)passed_counts[DiLepType::ALL]/(float)total_counts[DiLepType::ALL] << "]\n";
     else
     sx << "COUNTS ALL ACCEPTANCE   = -1\n";
     sx << "=============================================================\n";
@@ -131,12 +158,56 @@ void DiHiggsAcceptance::Terminate()
     cout << "DiHiggsAcceptance::Terminate    There were " << n_events_non_dilepton << " events that were not dileptonic (< = " << n_events_non_dilepton_less << ", > = " << n_events_non_dilepton_more << ")" << endl;
     timer()->Stop();
     cout << timer_summary() << endl;
+    for(int i = 0; i < DiLepType::Invalid; i++) {
+        total_wh[i]->Write();
+        passed_wh[i]->Write();
+    }
+    m_outfile->Write();
+    m_outfile->Close();
+
+    cout << "DiHiggsAcceptance::Terminate    TOTAL SUMW " << x_mass() << " " << total_sumw << endl;
+}
+//////////////////////////////////////////////////////////////////////////////
+void DiHiggsAcceptance::initialize_sumw_map()
+{
+    sumw_map.clear();
+    string filename = "dihiggs_sumw_list.txt";
+    std::ifstream ifs(filename.c_str());
+    int xmass;
+    double sumw;
+    while(ifs >> xmass >> sumw) {
+        sumw_map[xmass] = sumw; 
+    }
+}
+//////////////////////////////////////////////////////////////////////////////
+void DiHiggsAcceptance::initialize_xsec_map()
+{
+    dsid_map.clear();
+    string filename = "dihiggs_dsid_map.txt";
+    std::ifstream dfs(filename.c_str());
+    int d;
+    int x;
+    while(dfs >> d >> x) {
+        dsid_map[d] = x;
+    }
+
+
+    xsec_map.clear();
+    filename = "dihiggs_xsec.txt";
+    std::ifstream ifs(filename.c_str());
+    int dsid;
+    double xsec;
+    while(ifs >> dsid >> xsec) {
+        xsec_map[dsid_map[dsid]] = xsec;
+    }
+    for(auto x : xsec_map) {
+        cout << "X = " << x.first << "  xsec = " << x.second << endl;
+    }
+    
 }
 //////////////////////////////////////////////////////////////////////////////
 Bool_t DiHiggsAcceptance::Process(Long64_t entry)
 {
-    string fn = "DiHiggsAcceptance::Process    ";
-
     static Long64_t chain_entry = -1;
     chain_entry++;
     n_evt_processed++;
@@ -145,8 +216,50 @@ Bool_t DiHiggsAcceptance::Process(Long64_t entry)
     const xAOD::EventInfo* ei = 0;
     RETURN_CHECK(GetName(), event()->retrieve(ei, "EventInfo") );
 
-    if(dbg() || chain_entry%1000==0) {
+    string fn = "DiHiggsAcceptance::Process    ";
+    if(!file_setup) {
+        stringstream fname;
+        fname << "weights_";
+        string x = "hh";
+        if(x_mass() > 0) {
+            fname << "X" << x_mass();
+        }
+        else {
+            fname << x;
+        }
+        fname << ".root";
+            
+        m_outfile = new TFile(fname.str().c_str(), "RECREATE");
+        m_outfile->cd();
+        file_setup = true;
+
+        initialize_sumw_map();
+        initialize_xsec_map();
+    }
+
+    if(dbg() || chain_entry%5000==0) {
         cout << fn << " **** Processing entry " << setw(6) << chain_entry << " *** " << endl;
+    }
+
+    // get the MC event weight
+    m_weight = ei->mcEventWeight();
+    total_sumw += m_weight;
+
+    m_xsec = xsec_map[x_mass()];
+    m_sumw = sumw_map[x_mass()];
+
+    // incremenet all counts
+    //total_counts[DiLepType::ALL]++;
+    //total_w[DiLepType::ALL] += w();
+    //total_wh[DiLepType::ALL]->Fill(w());
+
+    // we should fill the "ALL" and denominator of each dilepton channel with the same
+    // since we are calculating the acceptance of selecting (on top of the kinematic
+    // selections) the given channel
+    for(int i = 0; i < DiLepType::Invalid; i++) {
+        total_counts[i]++;
+        total_w[i] += w();
+        total_wh[i]->Fill(w());
     }
 
     /////////////////////////////////////////////
@@ -291,17 +404,17 @@ void DiHiggsAcceptance::resonance_acceptance(vector<xAOD::TruthParticle*> lepton
     string fn = "DiHiggsAcceptance::resonance_acceptance    ";
     float window_lower = 0.0;
     float window_upper = 0.0;
-    x_mass_window_selection(window_lower, window_upper);
+    x_mass_window_selection(window_lower, window_upper, 0.9, 1.08);
 
-    // incremenet all counts
-    total_counts[DiLepType::ALL]++;
 
     DiLepType type = get_lepton_type(leptons);
     if(type==DiLepType::Invalid) {
         cout << fn << "Invalid dilepton type encountered, exiting" << endl;
         exit(1);
     }
-    total_counts[type]++;
+    //total_counts[type]++;
+    //total_w[type] += w();
+    //total_wh[type]->Fill(w());
 
     // bjet multiplicity
     size_t n_bjets = bjets.size();
@@ -324,6 +437,7 @@ void DiHiggsAcceptance::resonance_acceptance(vector<xAOD::TruthParticle*> lepton
     // dR ll
     float dRll = leptons.at(0)->p4().DeltaR(leptons.at(1)->p4());
     if(!(dRll<0.9)) return;
+    //if(!(dRll<0.65)) return;
 
     // mt2_llbb
     float mt2_llbb = get_mt2_llbb(leptons, bjets, met);
@@ -331,11 +445,12 @@ void DiHiggsAcceptance::resonance_acceptance(vector<xAOD::TruthParticle*> lepton
 
     // mbb
     float mbb = (bjets.at(0)->p4() + bjets.at(1)->p4()).M() * mev2gev;
-    if(! (mbb > 90 && mbb < 140) ) return;
+    if(! (mbb > 100 && mbb < 140) ) return;
 
     // HT2Ratio
     float ht2ratio = get_ht2_ratio(leptons, bjets, met);
     if(! (ht2ratio>0.8) ) return;
+    //if(! (ht2ratio>0.9) ) return;
 
     // MT_1
     float MT_1 = get_MT_1(leptons, bjets, met);
@@ -343,6 +458,10 @@ void DiHiggsAcceptance::resonance_acceptance(vector<xAOD::TruthParticle*> lepton
 
     passed_counts[DiLepType::ALL]++;
     passed_counts[type]++;
+    passed_w[DiLepType::ALL] += w();
+    passed_w[type] += w();
+    passed_wh[DiLepType::ALL]->Fill(w());
+    passed_wh[type]->Fill(w());
 
 }
 //////////////////////////////////////////////////////////////////////////////
