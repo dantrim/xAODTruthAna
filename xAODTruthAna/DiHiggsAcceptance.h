@@ -40,11 +40,14 @@ class DiHiggsAcceptance : public TruthSelectorBase
         void set_x_mass(int mass);
         int x_mass() { return m_x_mass; }
 
+        void set_lumi(float lumi);
+        float lumi() { return m_lumi; }
+
         void initialize_sumw_map();
         void initialize_xsec_map();
 
-        // weight normalized to 100/fb (xsec is in pb)
-        double w() { return ((m_weight * m_xsec * 100000.) / m_sumw); }
+        // weight to luminosity (m_lumi is numerical value in fb-1, convert to pb-1) 
+        double w() { return ((m_weight * m_xsec * (m_lumi * 1000.)) / m_sumw); }
 
         void resonance_acceptance(std::vector<xAOD::TruthParticle*> leptons, std::vector<xAOD::Jet*> bjets,
                 const xAOD::MissingETContainer* met);
@@ -73,6 +76,7 @@ class DiHiggsAcceptance : public TruthSelectorBase
         float m_weight;
         float m_xsec;
         double m_sumw;
+        double m_lumi; // luminosity in fb-1
         int n_events_non_dilepton;
         int n_events_non_dilepton_less;
         int n_events_non_dilepton_more;

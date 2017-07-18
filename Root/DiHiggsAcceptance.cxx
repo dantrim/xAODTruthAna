@@ -66,7 +66,8 @@ DiHiggsAcceptance::DiHiggsAcceptance() :
     file_setup(false),
     total_sumw(0.0),
     m_xsec(0.0),
-    m_sumw(0.0)
+    m_sumw(0.0),
+    m_lumi(100.)
 {
     cout << ANA << endl;
 
@@ -104,6 +105,12 @@ void DiHiggsAcceptance::set_x_mass(int mass)
     cout << ANA << "    signal hypothesis : " << hypo.str() << endl;
 
     m_x_mass = mass;
+}
+//////////////////////////////////////////////////////////////////////////////
+void DiHiggsAcceptance::set_lumi(float lumi)
+{
+    cout << ANA << "    Setting luminosity assumption to : " << lumi << " fb-1" << endl;
+    m_lumi = lumi;
 }
 //////////////////////////////////////////////////////////////////////////////
 void DiHiggsAcceptance::SlaveBegin(TTree* /*tree*/)
@@ -146,6 +153,8 @@ void DiHiggsAcceptance::print_counts()
     sx << "COUNTS ALL ACCEPTANCE   = " << passed_w[DiLepType::ALL] / total_w[DiLepType::ALL] << "  [" << (float)passed_counts[DiLepType::ALL]/(float)total_counts[DiLepType::ALL] << "]\n";
     else
     sx << "COUNTS ALL ACCEPTANCE   = -1\n";
+    sx << "-------------------------------------------------------------\n";
+    sx << "COUNTS LUMI = " << lumi() << " fb-1\n";
     sx << "=============================================================\n";
 
     cout << sx.str() << endl;
