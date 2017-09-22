@@ -23,6 +23,8 @@ typedef std::map<int, int> Counts;
 typedef std::map<int, float> CountsW;
 typedef std::map<int, TH1D*> CountsH;
 
+namespace res {
+
 enum DiLepType {
     EE=0,
     MM,
@@ -31,11 +33,11 @@ enum DiLepType {
     Invalid
 };
 
-class DiHiggsAcceptance : public TruthSelectorBase
+class DiHiggsResonance : public TruthSelectorBase
 {
     public :
-        DiHiggsAcceptance();
-        virtual ~DiHiggsAcceptance(){};
+        DiHiggsResonance();
+        virtual ~DiHiggsResonance(){};
 
         void set_x_mass(int mass);
         int x_mass() { return m_x_mass; }
@@ -45,27 +47,17 @@ class DiHiggsAcceptance : public TruthSelectorBase
 
         void initialize_sumw_map();
         void initialize_xsec_map();
-        void load_mt1_windows();
+        void initialize_histos();
+
+        void look_at_resonance(std::vector<xAOD::TruthParticle*> leptons, std::vector<xAOD::Jet*> bjets,
+                const xAOD::MissingETContainer* met);
 
         // weight to luminosity (m_lumi is numerical value in fb-1, convert to pb-1) 
         double w() { return ((m_weight * m_xsec * (m_lumi * 1000.)) / m_sumw); }
 
-        void resonance_acceptance(std::vector<xAOD::TruthParticle*> leptons, std::vector<xAOD::Jet*> bjets,
-                const xAOD::MissingETContainer* met);
-        void non_resonant_acceptance(std::vector<xAOD::TruthParticle*> leptons, std::vector<xAOD::Jet*> bjets,
-                const xAOD::MissingETContainer* met);
-
-        float get_mt2_llbb(std::vector<xAOD::TruthParticle*> leptons, std::vector<xAOD::Jet*> bjets,
-                const xAOD::MissingETContainer* met);
-        float get_ht2_ratio(std::vector<xAOD::TruthParticle*> leptons, std::vector<xAOD::Jet*> bjets,
-                const xAOD::MissingETContainer* met);
         float get_MT_1(std::vector<xAOD::TruthParticle*> leptons, std::vector<xAOD::Jet*> bjets,
-                const xAOD::MissingETContainer* met, bool do_bjet_rescaling);
-        float get_mt2_bb(std::vector<xAOD::Jet*> bjets, const xAOD::MissingETContainer* met);
+            const xAOD::MissingETContainer* met, bool do_bjet_rescaling);
 
-        float get_dr_ll_bb(std::vector<xAOD::TruthParticle*> leptons, std::vector<xAOD::Jet*> bjets);
-
-        void x_mass_window_selection(float& lower, float& upper, float dfactor = 0.9, float ufactor = 1.1);
         DiLepType get_lepton_type(const std::vector<xAOD::TruthParticle*> leptons);
 
 
@@ -82,28 +74,20 @@ class DiHiggsAcceptance : public TruthSelectorBase
         float m_xsec;
         double m_sumw;
         double m_lumi; // luminosity in fb-1
-        int n_events_non_dilepton;
-        int n_events_non_dilepton_less;
-        int n_events_non_dilepton_more;
-        Counts total_counts;
-        Counts passed_counts;
-        CountsW total_w;
-        CountsW passed_w;
         TFile* m_outfile;
-        CountsH total_wh;
-        CountsH passed_wh;
         bool file_setup;
         double total_sumw;
         std::map<int, double> sumw_map;
         std::map<int, double> xsec_map;
         std::map<int, int> dsid_map;
-        std::map<int, float> window_map_left;
-        std::map<int, float> window_map_right;
+
+        TH1F* h_mt1_scaled;
+        TH1F* h_mt1;
 
 
-    //ClassDef(DiHiggsAcceptance, 0);
+    //ClassDef(DiHiggsResonance, 0);
 
 };
-
+};
 
 #endif

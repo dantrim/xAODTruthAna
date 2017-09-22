@@ -167,12 +167,12 @@ void DiHiggsAcceptance::Terminate()
     cout << "DiHiggsAcceptance::Terminate    There were " << n_events_non_dilepton << " events that were not dileptonic (< = " << n_events_non_dilepton_less << ", > = " << n_events_non_dilepton_more << ")" << endl;
     timer()->Stop();
     cout << timer_summary() << endl;
-    for(int i = 0; i < DiLepType::Invalid; i++) {
-        total_wh[i]->Write();
-        passed_wh[i]->Write();
-    }
-    m_outfile->Write();
-    m_outfile->Close();
+    //for(int i = 0; i < DiLepType::Invalid; i++) {
+    //    total_wh[i]->Write();
+    //    passed_wh[i]->Write();
+    //}
+    //m_outfile->Write();
+    //m_outfile->Close();
 
     cout << "DiHiggsAcceptance::Terminate    TOTAL SUMW " << x_mass() << " " << total_sumw << endl;
 }
@@ -215,6 +215,27 @@ void DiHiggsAcceptance::initialize_xsec_map()
     
 }
 //////////////////////////////////////////////////////////////////////////////
+void DiHiggsAcceptance::load_mt1_windows()
+{
+    window_map_left.clear();
+    window_map_right.clear();
+    string filename = "bump_window_cuts.txt";
+    std::ifstream wfs(filename.c_str());
+    int x;
+    float left;
+    float right;
+    while(wfs >> x >> left >> right) {
+        window_map_left[x] = left;
+        window_map_right[x] = right;
+    }
+
+    cout << " ------------ MT WINDOW MAP -------------" << endl;
+    for(auto x : window_map_left) {
+        cout << " X " << x.first << "   [" << x.second << ", " << window_map_right[x.first] << "]" << endl;
+    }
+
+}
+//////////////////////////////////////////////////////////////////////////////
 Bool_t DiHiggsAcceptance::Process(Long64_t entry)
 {
     static Long64_t chain_entry = -1;
@@ -227,23 +248,24 @@ Bool_t DiHiggsAcceptance::Process(Long64_t entry)
 
     string fn = "DiHiggsAcceptance::Process    ";
     if(!file_setup) {
-        stringstream fname;
-        fname << "weights_";
-        string x = "hh";
-        if(x_mass() > 0) {
-            fname << "X" << x_mass();
-        }
-        else {
-            fname << x;
-        }
-        fname << ".root";
-            
-        m_outfile = new TFile(fname.str().c_str(), "RECREATE");
-        m_outfile->cd();
+        //stringstream fname;
+        //fname << "weights_";
+        //string x = "hh";
+        //if(x_mass() > 0) {
+        //    fname << "X" << x_mass();
+        //}
+        //else {
+        //    fname << x;
+        //}
+        //fname << ".root";
+        //    
+        //m_outfile = new TFile(fname.str().c_str(), "RECREATE");
+        //m_outfile->cd();
         file_setup = true;
 
         initialize_sumw_map();
         initialize_xsec_map();
+        if(x_mass()>0) load_mt1_windows();
     }
 
     if(dbg() || chain_entry%5000==0) {
@@ -400,11 +422,34 @@ Bool_t DiHiggsAcceptance::Process(Long64_t entry)
         resonance_acceptance(leptons, bjets, met);
     }
     else {
-        non_resonant_acceptance();
+        non_resonant_acceptance(leptons, bjets, met);
     }
 
 
     return kTRUE;
+}
+//////////////////////////////////////////////////////////////////////////////
+float DiHiggsAcceptance::get_dr_ll_bb(vector<xAOD::TruthParticle*> leptons,
+        vector<xAOD::Jet*> bjets)
+{
+    TLorentzVector l0;
+    TLorentzVector l1;
+    TLorentzVector b0;
+    TLorentzVector b1;
+
+    l0.SetPtEtaPhiM(leptons.at(0)->p4().Pt(), leptons.at(0)->p4().Eta(), leptons.at(0)->p4().Phi(),
+            leptons.at(0)->p4().M());
+    l1.SetPtEtaPhiM(leptons.at(1)->p4().Pt(), leptons.at(1)->p4().Eta(), leptons.at(1)->p4().Phi(),
+            leptons.at(1)->p4().M());
+    b0.SetPtEtaPhiM(bjets.at(0)->p4().Pt(), bjets.at(0)->p4().Eta(), bjets.at(0)->p4().Phi(),
+            bjets.at(0)->p4().M());
+    b1.SetPtEtaPhiM(bjets.at(1)->p4().Pt(), bjets.at(1)->p4().Eta(), bjets.at(1)->p4().Phi(),
+            bjets.at(1)->p4().M());
+
+    TLorentzVector ll = (l0 + l1);
+    TLorentzVector bb = (b0 + b1);
+
+    return ll.DeltaR(bb);
 }
 //////////////////////////////////////////////////////////////////////////////
 void DiHiggsAcceptance::resonance_acceptance(vector<xAOD::TruthParticle*> leptons,
@@ -414,6 +459,7 @@ void DiHiggsAcceptance::resonance_acceptance(vector<xAOD::TruthParticle*> lepton
     float window_lower = 0.0;
     float window_upper = 0.0;
     x_mass_window_selection(window_lower, window_upper, 0.9, 1.08);
+    //cout << fn << "WINDOW [" << window_lower << ", " << window_upper << "]" << endl;
 
 
     DiLepType type = get_lepton_type(leptons);
@@ -446,11 +492,12 @@ void DiHiggsAcceptance::resonance_acceptance(vector<xAOD::TruthParticle*> lepton
     // dR ll
     float dRll = leptons.at(0)->p4().DeltaR(leptons.at(1)->p4());
     if(!(dRll<0.9)) return;
-    //if(!(dRll<0.65)) return;
+    //if(!(dRll<0.75)) return;
 
     // mt2_llbb
     float mt2_llbb = get_mt2_llbb(leptons, bjets, met);
-    if(! (mt2_llbb > 90 && mt2_llbb < 140) ) return;
+    if(! (mt2_llbb > 100 && mt2_llbb < 140) ) return;
+    //if(! (mt2_llbb > 90 && mt2_llbb < 140) ) return;
 
     // mbb
     float mbb = (bjets.at(0)->p4() + bjets.at(1)->p4()).M() * mev2gev;
@@ -462,8 +509,13 @@ void DiHiggsAcceptance::resonance_acceptance(vector<xAOD::TruthParticle*> lepton
     //if(! (ht2ratio>0.9) ) return;
 
     // MT_1
-    float MT_1 = get_MT_1(leptons, bjets, met);
+    bool do_bjet_rescaling = (x_mass() < 1000);
+    float MT_1 = get_MT_1(leptons, bjets, met, do_bjet_rescaling);
     if(! (MT_1 > window_lower && MT_1 < window_upper) ) return;
+
+    // dR_ll_bb
+    //float drllbb = get_dr_ll_bb(leptons, bjets);
+    //if(! (drllbb>2.5) ) return;
 
     passed_counts[DiLepType::ALL]++;
     passed_counts[type]++;
@@ -500,6 +552,23 @@ float DiHiggsAcceptance::get_mt2_llbb(std::vector<xAOD::TruthParticle*> leptons,
     return calc.Compute() * mev2gev;
 }
 //////////////////////////////////////////////////////////////////////////////
+float DiHiggsAcceptance::get_mt2_bb(std::vector<xAOD::Jet*> bjets,
+        const xAOD::MissingETContainer* met)
+{
+    TLorentzVector b0;
+    TLorentzVector b1;
+    TLorentzVector MET;
+
+    b0.SetPtEtaPhiM(bjets.at(0)->p4().Pt(), bjets.at(0)->p4().Eta(), bjets.at(0)->p4().Phi(),
+            bjets.at(0)->p4().M());
+    b1.SetPtEtaPhiM(bjets.at(1)->p4().Pt(), bjets.at(1)->p4().Eta(), bjets.at(1)->p4().Phi(),
+            bjets.at(1)->p4().M());
+    MET.SetPxPyPzE((*met)["NonInt"]->mpx(), (*met)["NonInt"]->mpy(), 0., (*met)["NonInt"]->met());
+
+    ComputeMT2 calc = ComputeMT2(b0, b1, MET);
+    return calc.Compute() * mev2gev;
+}
+//////////////////////////////////////////////////////////////////////////////
 float DiHiggsAcceptance::get_ht2_ratio(vector<xAOD::TruthParticle*> leptons,
         vector<xAOD::Jet*> bjets, const xAOD::MissingETContainer* met)
 {
@@ -526,7 +595,7 @@ float DiHiggsAcceptance::get_ht2_ratio(vector<xAOD::TruthParticle*> leptons,
 }
 //////////////////////////////////////////////////////////////////////////////
 float DiHiggsAcceptance::get_MT_1(vector<xAOD::TruthParticle*> leptons,
-        vector<xAOD::Jet*> bjets, const xAOD::MissingETContainer* met)
+        vector<xAOD::Jet*> bjets, const xAOD::MissingETContainer* met, bool do_bjet_rescaling)
 {
     TLorentzVector l0;
     TLorentzVector l1;
@@ -544,7 +613,16 @@ float DiHiggsAcceptance::get_MT_1(vector<xAOD::TruthParticle*> leptons,
             bjets.at(1)->p4().M());
     MET.SetPxPyPzE((*met)["NonInt"]->mpx(), (*met)["NonInt"]->mpy(), 0., (*met)["NonInt"]->met());
 
-    TLorentzVector vis = (l0 + l1 + b0 + b1);
+    TLorentzVector bjet_system = b0 + b1;
+    if(do_bjet_rescaling) {
+        //cout << "PERFORMING BJET SYSTEM MASS RESCALING" << endl;
+        double mbb = bjet_system.M() * mev2gev;
+        double scaling = 125.09/mbb;
+        bjet_system.SetPtEtaPhiE(bjet_system.Pt() * scaling, bjet_system.Eta(),
+            bjet_system.Phi(), bjet_system.E() * scaling);
+    }
+
+    TLorentzVector vis = (l0 + l1 + bjet_system);
     double pt_vis = vis.Pt();
     double m_vis = vis.M();
     double et_vis = sqrt(pt_vis*pt_vis + m_vis*m_vis);
@@ -557,9 +635,15 @@ float DiHiggsAcceptance::get_MT_1(vector<xAOD::TruthParticle*> leptons,
 void DiHiggsAcceptance::x_mass_window_selection(float& lower, float& upper, float dfactor, float ufactor)
 {
     string fn = "DiHiggsAcceptance::x_mass_window_selection    ";
-    lower = dfactor * x_mass();
-    upper = ufactor * x_mass();
-    //cout << fn << "Setting X mass window selection to (" << lower << "," << upper << ")" << endl; 
+
+    // use the loaded map
+    lower = window_map_left[x_mass()] * x_mass();
+    upper = window_map_right[x_mass()] * x_mass();
+
+    //cout << fn << "WINDOW [" << lower << ", " << upper << "]" << endl;
+
+    //lower = dfactor * x_mass();
+    //upper = ufactor * x_mass();
 }
 //////////////////////////////////////////////////////////////////////////////
 DiLepType DiHiggsAcceptance::get_lepton_type(const vector<xAOD::TruthParticle*> leptons)
@@ -589,9 +673,59 @@ DiLepType DiHiggsAcceptance::get_lepton_type(const vector<xAOD::TruthParticle*> 
     }
 }
 //////////////////////////////////////////////////////////////////////////////
-void DiHiggsAcceptance::non_resonant_acceptance()
+void DiHiggsAcceptance::non_resonant_acceptance(vector<xAOD::TruthParticle*> leptons,
+        vector<xAOD::Jet*> bjets, const xAOD::MissingETContainer* met)
 {
     string fn = "DiHiggsAcceptance::non_resonant_acceptance    ";
-    cout << fn << "Not yet implemented, exiting" << endl; 
-    exit(1);
+
+    DiLepType type = get_lepton_type(leptons);
+    if(type == DiLepType::Invalid) {
+        cout << fn << "Invalid dilepton type encountered, exiting" << endl;
+        exit(1);
+    }
+
+    //bjet multiplicity
+    size_t n_bjets = bjets.size();
+    if(!(n_bjets>=2)) return;
+
+    // mll
+    float mll = (leptons.at(0)->p4() + leptons.at(1)->p4()).M() * mev2gev;
+    if(!(mll>20.)) return;
+
+    // lepton pT
+    float pt0 = leptons.at(0)->p4().Pt()*mev2gev;
+    float pt1 = leptons.at(1)->p4().Pt()*mev2gev;
+    if(!(pt0>25. && pt1>20.)) return;
+
+    // SF Z-veto
+    if(type==DiLepType::EE || type==DiLepType::MM) {
+        if(!(fabs(mll-91.2)>10.)) return;
+    }
+
+    // dRll
+    float dRll = leptons.at(0)->p4().DeltaR(leptons.at(1)->p4());
+    if(!(dRll<0.9)) return;
+
+    // mt2_llbb
+    float mt2_llbb = get_mt2_llbb(leptons, bjets, met);
+    if(! (mt2_llbb > 90 && mt2_llbb < 140) ) return;
+
+    // mbb
+    float mbb = (bjets.at(0)->p4() + bjets.at(1)->p4()).M() * mev2gev;
+    if(! (mbb > 100 && mbb < 140) ) return;
+
+    // HT2Ratio
+    float ht2ratio = get_ht2_ratio(leptons, bjets, met);
+    if(! (ht2ratio>0.8) ) return;
+
+    // mt2_bb
+    float mt2_bb = get_mt2_bb(bjets, met);
+    if(!(mt2_bb>150.)) return;
+
+    passed_counts[DiLepType::ALL]++;
+    passed_counts[type]++;
+    passed_w[DiLepType::ALL] += w();
+    passed_w[type] += w();
+    passed_wh[DiLepType::ALL]->Fill(w());
+    passed_wh[type]->Fill(w());
 }
