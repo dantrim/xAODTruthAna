@@ -38,6 +38,8 @@ class WWbbTruth : public TruthSelectorBase
         void initialize_sumw_map();
         void initialize_xsec_map();
 
+        void setup_output_tree();
+
 
         // TSelector overrides
         virtual void SlaveBegin(TTree* tree);
@@ -68,6 +70,10 @@ class WWbbTruth : public TruthSelectorBase
 
         std::map<int, double> sumw_map;
         std::map<int, double> xsec_map;
+
+        // ROOT STUFF
+        TFile* m_rfile;
+        TTree* m_tree;
 
 
 }; // class

@@ -38,7 +38,9 @@ WWbbTruth::WWbbTruth() :
     m_weight(0.0),
     m_sumw(0.0),
     m_xsec(0.0),
-    m_lumi(1.)
+    m_lumi(1.),
+    m_rfile(0),
+    m_tree(0)
 {
     cout << "WWbbTruth()" << endl;
 }
@@ -92,6 +94,15 @@ void WWbbTruth::initialize_sumw_map()
     
 }
 //////////////////////////////////////////////////////////////////////////////
+void WWbbTruth::setup_output_tree()
+{
+    stringstream ofn;
+    ofn << "wwbb_truth_" << m_dsid << ".root";
+    m_outfilename = ofn.str(); 
+    m_rfile = new TFile(ofn.str().c_str(), "RECREATE");
+
+}
+//////////////////////////////////////////////////////////////////////////////
 Bool_t WWbbTruth::Process(Long64_t entry)
 {
     static Long64_t chain_entry = -1;
@@ -110,6 +121,8 @@ Bool_t WWbbTruth::Process(Long64_t entry)
         m_xsec = xsec_map[m_dsid];
         m_sumw = sumw_map[m_dsid];
 
+        setup_output_tree();
+
         m_outfile_setup = true;
     }
 
@@ -125,8 +138,6 @@ Bool_t WWbbTruth::Process(Long64_t entry)
         cout << fn << "Non-sumw calculation loop not yet set!" << endl;
 
         m_weight = ei->mcEventWeight();
-
-        exit(1);
     }
 
     return true;
@@ -138,6 +149,12 @@ void WWbbTruth::Terminate()
 
     if(m_do_sumw_calc) {
         cout << "WWbbTruth::Terminate    TOTAL SUMW = " << m_total_sumw << endl;
+    }
+    else {
+        m_rfile->cd();
+        //m_tree->Write();
+        m_rfile->Write();
+
     }
 }
 
