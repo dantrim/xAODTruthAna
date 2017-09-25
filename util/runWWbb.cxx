@@ -25,6 +25,7 @@ void help()
     cout << "  --dsid               sample dsid [REQUIRED]" << endl;
     cout << "  --sumw               do sumw calc only" << endl;
     cout << "  -l|--lumi            set lumi (in pb) [default=1000 pb]" << endl;
+    cout << "  -s|--suffix          add a suffix to output root file" << endl;
     cout << "  -h                   print this help message" << endl;
 }
 
@@ -34,8 +35,9 @@ int main(int argc, char** argv)
     string filelist = "";
     int dbg = 0;
     bool do_sumw = false;
-    double lumi = 1000.0;
+    double lumi = 1.0; /* fb-1 */
     int dsid = 0;
+    string suffix = "";
 
     int optin(1);
     while(optin < argc) {
@@ -46,6 +48,7 @@ int main(int argc, char** argv)
         else if     (opt == "--sumw") { do_sumw = true; }
         else if     (opt == "-l" || opt == "--lumi") { lumi = atof(argv[++optin]); }
         else if     (opt == "-h") { help(); return 0; }
+        else if     (opt == "-s" || opt == "--suffix") { suffix = argv[++optin]; }
         else if     (opt == "--dsid") { dsid = atoi(argv[++optin]); }
         else {
             cout << "Unknown command line argument : '" << opt << "'" << endl;
@@ -80,6 +83,7 @@ int main(int argc, char** argv)
     ana->do_sumw_calc(do_sumw);
     ana->set_lumi(lumi);
     ana->set_dsid(dsid);
+    ana->set_suffix(suffix);
 
     if(nevents < 0) nevents = n_entries;
     cout << "-----------------------------------------------" << endl;
