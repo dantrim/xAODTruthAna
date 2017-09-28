@@ -219,6 +219,19 @@ void WWbbTruth::setup_output_tree()
     m_tree->Branch("mt2_llbb", &m_mt2_llbb);
     m_tree->Branch("mt2_bb", &m_mt2_bb);
 
+
+    // THREE-BODY VARIABLES
+    m_tree->Branch("nJets", &m_3b_njets);
+    m_tree->Branch("nSJets", &m_3b_nsjets);
+    m_tree->Branch("nBJets", &m_3b_nbjets);
+    m_tree->Branch("nLeptons", &m_3b_nleptons);
+    m_tree->Branch("MDR", &m_3b_mdr);
+    m_tree->Branch("DPB_vSS", &m_3b_dpb);
+    m_tree->Branch("cosThetaB", &m_3b_cosThetaB);
+    m_tree->Branch("RPT", &m_3b_rpt);
+    m_tree->Branch("gamInvRp1", &m_3b_gamInvRp1);
+    m_tree->Branch("l_pt", &m_3b_lepPt);
+
 }
 //////////////////////////////////////////////////////////////////////////////
 Bool_t WWbbTruth::Process(Long64_t entry)

@@ -184,6 +184,18 @@ class WWbbTruth : public TruthSelectorBase
 
         float m_mt2_llbb;
         float m_mt2_bb;
+
+        // THREE-BODY VARIABLES
+        int m_3b_njets;
+        int m_3b_nsjets;
+        int m_3b_nbjets;
+        int m_3b_nleptons;
+        float m_3b_mdr;
+        float m_3b_dpb;
+        float m_3b_cosThetaB;
+        float m_3b_rpt;
+        float m_3b_gamInvRp1;
+        std::vector<float> m_3b_lepPt;
         
 
 
