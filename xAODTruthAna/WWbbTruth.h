@@ -67,6 +67,12 @@ class WWbbTruth : public TruthSelectorBase
 
         void setup_output_tree();
         bool process_event();
+        std::vector<double> super_razor(std::vector<xAOD::TruthParticle*> leptons,
+                std::vector<xAOD::Jet*> jets, const xAOD::MissingETContainer* met);
+        void superRazor(std::vector<TLorentzVector> leptons, TLorentzVector met,
+                TVector3& vBETA_z, TVector3& pT_CM, TVector3& vBETA_T_CMtoR, TVector3& vBETA_R,
+                double& shatr, double& DPB, double& dphi_l1_l2, double& gamma, double& dphi_blah,
+                double& mdr, double& rpt);
         void fill_tree(std::vector<xAOD::TruthParticle*> leptons,
                 std::vector<xAOD::Jet*> jets, std::vector<xAOD::Jet*> sjets, std::vector<xAOD::Jet*> bjets,
                 const xAOD::MissingETContainer* met);
@@ -190,12 +196,15 @@ class WWbbTruth : public TruthSelectorBase
         int m_3b_nsjets;
         int m_3b_nbjets;
         int m_3b_nleptons;
+        int m_3b_nmuons;
+        int m_3b_nelectrons;
         float m_3b_mdr;
         float m_3b_dpb;
         float m_3b_cosThetaB;
         float m_3b_rpt;
         float m_3b_gamInvRp1;
         std::vector<float> m_3b_lepPt;
+        std::vector<int> m_3b_lepQ;
         
 
 

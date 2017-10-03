@@ -4,7 +4,7 @@
 #include <iostream>
 #include <cstdio> // printf
 #include <sstream>
-#include <math.h> // sqrt, cos
+#include <math.h> // sqrt, cos, tanh
 #include <fstream>
 using namespace std;
 
@@ -24,6 +24,7 @@ using namespace std;
 //ANA
 #include "xAODTruthAna/xaod_utils.h"
 #include "xAODTruthAna/MT2_ROOT.h"
+
 
 std::string ANANAME = "WWbbTruth";
 const float GEV = 1e-3;
@@ -225,12 +226,15 @@ void WWbbTruth::setup_output_tree()
     m_tree->Branch("nSJets", &m_3b_nsjets);
     m_tree->Branch("nBJets", &m_3b_nbjets);
     m_tree->Branch("nLeptons", &m_3b_nleptons);
+    m_tree->Branch("nMuons", &m_3b_nmuons);
+    m_tree->Branch("nElectrons", &m_3b_nelectrons);
     m_tree->Branch("MDR", &m_3b_mdr);
     m_tree->Branch("DPB_vSS", &m_3b_dpb);
     m_tree->Branch("cosThetaB", &m_3b_cosThetaB);
     m_tree->Branch("RPT", &m_3b_rpt);
     m_tree->Branch("gamInvRp1", &m_3b_gamInvRp1);
     m_tree->Branch("l_pt", &m_3b_lepPt);
+    m_tree->Branch("l_q", &m_3b_lepQ);
 
 }
 //////////////////////////////////////////////////////////////////////////////
@@ -402,6 +406,115 @@ bool WWbbTruth::process_event()
     return true;
 }
 //////////////////////////////////////////////////////////////////////////////
+vector<double> WWbbTruth::super_razor(vector<xAOD::TruthParticle*> leptons,
+        vector<xAOD::Jet*> jets, const xAOD::MissingETContainer* met)
+{
+    vector<double> out; // [MDR, RPT, DPB, gamInvRp1]
+    double shatr;
+    TVector3 dummyvec;
+    double dpb;
+    double dummy;
+    double gamma;
+    double rpt;
+    double mdr;
+
+    vector<TLorentzVector> tlv_leptons;
+    for(auto & l : leptons) {
+        TLorentzVector tlv;
+        tlv.SetPtEtaPhiE(l->p4().Pt() * 1e-3, l->p4().Eta(), l->p4().Phi(), l->p4().E() * 1e-3); 
+        tlv_leptons.push_back(tlv);
+    }
+    TLorentzVector metTLV;
+    metTLV.SetPxPyPzE((*met)["NonInt"]->mpx() * 1e-3, (*met)["NonInt"]->mpy() * 1e-3, 0., (*met)["NonInt"]->met() * 1e-3);
+    m_metphi = metTLV.Phi();
+    m_met = metTLV.Pt() * GEV;
+    superRazor(tlv_leptons, metTLV, dummyvec, dummyvec, dummyvec, dummyvec,
+            shatr, dpb, dummy, gamma, dummy, mdr, rpt); 
+
+    out.push_back(mdr);
+    out.push_back(rpt);
+    out.push_back(dpb);
+    out.push_back(gamma);
+
+
+    return out;
+
+}
+//////////////////////////////////////////////////////////////////////////////
+void WWbbTruth::superRazor(vector<TLorentzVector> leptons, TLorentzVector met, TVector3& vBETA_z, TVector3& pT_CM,
+                TVector3& vBETA_T_CMtoR, TVector3& vBETA_R,
+                double& SHATR, double& dphi_LL_vBETA_T, double& dphi_L1_L2,
+                double& gamma_R, double& dphi_vBETA_R_vBETA_T,
+                double& MDELTAR, double& rpt)
+{
+    //
+    // Code written by Christopher Rogan <crogan@cern.ch>, 04-23-13
+    // Details given in paper (http://arxiv.org/abs/1310.4827) written by
+    // Matthew R. Buckley, Joseph D. Lykken, Christopher Rogan, Maria Spiropulu
+    //
+    if (leptons.size() < 2) return;
+
+    // necessary variables
+    TLorentzVector l0 = leptons.at(0);
+    TLorentzVector l1 = leptons.at(1);
+
+    //
+    // Lab frame
+    //
+    //Longitudinal boost
+    vBETA_z = (1. / (l0.E() + l1.E()))*(l0 + l1).Vect();
+    vBETA_z.SetX(0.0);
+    vBETA_z.SetY(0.0);
+
+    l0.Boost(-vBETA_z);
+    l1.Boost(-vBETA_z);
+
+    //pT of CM frame
+    pT_CM = (l0 + l1).Vect() + met.Vect();
+    pT_CM.SetZ(0.0);
+
+    TLorentzVector ll = l0 + l1;
+    //invariant mass of the total event
+    SHATR = sqrt(2.*(ll.E()*ll.E() - ll.Vect().Dot(pT_CM)
+        + ll.E()*sqrt(ll.E()*ll.E() + pT_CM.Mag2() - 2.*ll.Vect().Dot(pT_CM))));
+
+    //rpt = pT_CM.Mag() / (pT_CM.Mag() + SHATR / 4.);
+    float jt = (leptons.at(0) + leptons.at(1) + met).Pt();
+    rpt = jt / ( jt + SHATR / 4. );
+
+    vBETA_T_CMtoR = (1. / sqrt(pT_CM.Mag2() + SHATR*SHATR))*pT_CM;
+
+    l0.Boost(-vBETA_T_CMtoR);
+    l1.Boost(-vBETA_T_CMtoR);
+    ll.Boost(-vBETA_T_CMtoR);
+
+    //
+    //R-frame
+    //
+    dphi_LL_vBETA_T = fabs((ll.Vect()).DeltaPhi(vBETA_T_CMtoR));
+
+    dphi_L1_L2 = fabs(l0.Vect().DeltaPhi(l1.Vect()));
+
+    vBETA_R = (1. / (l0.E() + l1.E()))*(l0.Vect() - l1.Vect());
+
+    gamma_R = 1. / sqrt(1. - vBETA_R.Mag2());
+
+    gamma_R = sqrt( 2 * (l0.Vect().Mag() * l1.Vect().Mag() + l0.Vect().Dot(l1.Vect())) ) / (l0.Vect().Mag() + l1.Vect().Mag());
+
+    dphi_vBETA_R_vBETA_T = fabs(vBETA_R.DeltaPhi(vBETA_T_CMtoR));
+
+    l0.Boost(-vBETA_R);
+    l1.Boost(vBETA_R);
+
+    //
+    //R+1 frame
+    //
+    MDELTAR = 2.*l0.E();
+    
+
+    return;
+}
+//////////////////////////////////////////////////////////////////////////////
 void WWbbTruth::fill_tree(vector<xAOD::TruthParticle*> leptons,
         vector<xAOD::Jet*> jets, vector<xAOD::Jet*> sjets, vector<xAOD::Jet*> bjets,
         const xAOD::MissingETContainer* met)
@@ -523,6 +636,54 @@ void WWbbTruth::fill_tree(vector<xAOD::TruthParticle*> leptons,
         ComputeMT2 calc_mt2bb = ComputeMT2(bjets.at(0)->p4(), bjets.at(1)->p4(), metTLV);
         m_mt2_bb = calc_mt2bb.Compute() * GEV;
     }
+
+
+    // THREE-BODY STUFF
+    m_3b_njets = jets.size();
+    m_3b_nsjets = sjets.size();
+    m_3b_nbjets = bjets.size();
+    m_3b_nleptons = leptons.size();
+    int n_mu = 0;
+    int n_el = 0;
+    if(ee(leptons.at(0), leptons.at(1))) {
+        n_mu = 0;
+        n_el = 2;
+    }
+    else if(mm(leptons.at(0), leptons.at(1))) {
+        n_mu = 2;
+        n_el = 0;
+    }
+    else if(df(leptons.at(0), leptons.at(1))) {
+        n_mu = 1;
+        n_el = 1;
+    }
+
+    m_3b_nmuons = n_mu;
+    m_3b_nelectrons = n_el;
+    vector<double> srazor = super_razor(leptons, bjets, met);
+    m_3b_mdr = srazor.at(0);
+    m_3b_dpb = srazor.at(2);
+    m_3b_rpt = srazor.at(1);
+    m_3b_gamInvRp1 = srazor.at(3);
+
+    // cosThetaB
+    TLorentzVector lp, lm; 
+    for(auto & l : leptons) {
+        if(l->charge() < 0) lm = l->p4(); 
+        else if(l->charge() > 0) lp = l->p4();
+    }
+    TLorentzVector ll = lp + lm;
+    TVector3 boost = ll.BoostVector();
+    lp.Boost(-boost);
+    lm.Boost(-boost);
+    m_3b_cosThetaB = tanh((lp.Eta() - lm.Eta())/2.);
+
+    m_3b_lepPt.push_back(leptons.at(0)->pt() * 1e-3);
+    m_3b_lepPt.push_back(leptons.at(1)->pt() * 1e-3);
+
+    m_3b_lepQ.push_back(leptons.at(0)->charge());
+    m_3b_lepQ.push_back(leptons.at(1)->charge());
+    
 
 
     ////////////////////////////////////////////////////////////////
