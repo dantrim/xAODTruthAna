@@ -40,6 +40,8 @@ TruthSelectorBase::TruthSelectorBase() :
     m_output_tree(NULL),
     m_tree(NULL),
     m_event(new xAOD::TEvent(xAOD::TEvent::kClassAccess) ),
+    //m_event(new xAOD::TEvent(xAOD::TEvent::kAthenaAccess) ),
+    m_tstore(),
     m_input_samplename(""),
     m_output_filename("")
 {

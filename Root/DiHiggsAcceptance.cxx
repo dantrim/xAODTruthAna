@@ -78,6 +78,11 @@ DiHiggsAcceptance::DiHiggsAcceptance() :
         total_w[i] = 0.0;
         passed_w[i] = 0.0;
 
+        total_counts_beff[i] = 0;
+        passed_counts_beff[i] = 0;
+        total_w_beff[i] = 0.0;
+        passed_w_beff[i] = 0.0;
+
         string histtype = "";
         if(i==DiLepType::EE) histtype = "EE";
         else if(i==DiLepType::MM) histtype = "MM";
@@ -94,6 +99,9 @@ DiHiggsAcceptance::DiHiggsAcceptance() :
         htitle << "Passed W (" << histtype << ");W;Entries";
         passed_wh[i] = new TH1D(hname.str().c_str(), htitle.str().c_str(), 100,  -0.4, 0.4);
     }
+
+    m_random = new TRandom3();
+    m_random->SetSeed(0);
 }
 //////////////////////////////////////////////////////////////////////////////
 void DiHiggsAcceptance::set_x_mass(int mass)
@@ -145,12 +153,49 @@ void DiHiggsAcceptance::print_counts()
     if(total_counts[DiLepType::EM]>0)
     sx << "COUNTS EM ACCEPTANCE    = " << passed_w[DiLepType::EM] / total_w[DiLepType::EM] << "  [" << (float)passed_counts[DiLepType::EM]/(float)total_counts[DiLepType::EM] << "]\n";
     else
-    sx << "COUNTS EM ACCEPTANCe    = -1\n";
+    sx << "COUNTS EM ACCEPTANCE    = -1\n";
     sx << "COUNTS - - - - - - - - - - - - - - - - -\n";
     sx << "COUNTS ALL TOTAL READ IN= " << total_w[DiLepType::ALL] << "  [" << total_counts[DiLepType::ALL] << "]\n";
     sx << "COUNTS ALL PASSED       = " << passed_w[DiLepType::ALL] << "  [" << passed_counts[DiLepType::ALL] << "]\n";
     if(total_counts[DiLepType::ALL]>0)
     sx << "COUNTS ALL ACCEPTANCE   = " << passed_w[DiLepType::ALL] / total_w[DiLepType::ALL] << "  [" << (float)passed_counts[DiLepType::ALL]/(float)total_counts[DiLepType::ALL] << "]\n";
+    else
+    sx << "COUNTS ALL ACCEPTANCE   = -1\n";
+    sx << "-------------------------------------------------------------\n";
+    sx << "COUNTS LUMI = " << lumi() << " fb-1\n";
+    sx << "=============================================================\n";
+
+    cout << sx.str() << endl;
+    sx.str("");
+    sx << "\n\n==================== COUNTS SUMMARY BEFF ======================\n";
+    sx << "COUNTS " << x_mass() << "\n";
+    sx << "COUNTS - - - - - - - - - - - - - - - - -\n";
+    sx << "COUNTS EE TOTAL READ IN = " << total_w_beff[DiLepType::EE] << "  [" << total_counts_beff[DiLepType::EE] << "]\n";
+    sx << "COUNTS EE TOTAL PASSED  = " << passed_w_beff[DiLepType::EE] << "  [" << passed_counts_beff[DiLepType::EE] << "]\n";
+    if(total_counts_beff[DiLepType::EE]>0)
+    sx << "COUNTS EE ACCEPTANCE    = " << passed_w_beff[DiLepType::EE]/total_w_beff[DiLepType::EE] << "  [" << (float)passed_counts_beff[DiLepType::EE]/(float)total_counts_beff[DiLepType::EE] << "]\n";    
+    else {
+    sx << "COUNTS EE ACCEPTANCE    = -1\n"; 
+    }
+    sx << "COUNTS - - - - - - - - - - - - - - - - -\n";
+    sx << "COUNTS MM TOTAL READ IN = " << total_w_beff[DiLepType::MM] << "  [" << total_counts_beff[DiLepType::MM] << "]\n";
+    sx << "COUNTS MM TOTAL PASSED  = " << passed_w_beff[DiLepType::MM] << "  [" << passed_counts_beff[DiLepType::MM] << "]\n";
+    if(total_counts_beff[DiLepType::MM]>0)
+    sx << "COUNTS MM ACCEPTANCE    = " << passed_w_beff[DiLepType::MM] / total_w_beff[DiLepType::MM] << "  [" << (float)passed_counts_beff[DiLepType::MM]/(float)total_counts_beff[DiLepType::MM] << "]\n";
+    else
+    sx << "COUNTS MM ACCEPTANCE    = -1\n";
+    sx << "COUNTS - - - - - - - - - - - - - - - - -\n";
+    sx << "COUNTS EM TOTAL READ IN = " << total_w_beff[DiLepType::EM] << "  [" << total_counts_beff[DiLepType::EM] << "]\n";
+    sx << "COUNTS EM TOTAL PASSED  = " << passed_w_beff[DiLepType::EM] << "  [" << passed_counts_beff[DiLepType::EM] << "]\n";
+    if(total_counts_beff[DiLepType::EM]>0)
+    sx << "COUNTS EM ACCEPTANCE    = " << passed_w_beff[DiLepType::EM] / total_w_beff[DiLepType::EM] << "  [" << (float)passed_counts_beff[DiLepType::EM]/(float)total_counts_beff[DiLepType::EM] << "]\n";
+    else
+    sx << "COUNTS EM ACCEPTANCE    = -1\n";
+    sx << "COUNTS - - - - - - - - - - - - - - - - -\n";
+    sx << "COUNTS ALL TOTAL READ IN= " << total_w_beff[DiLepType::ALL] << "  [" << total_counts_beff[DiLepType::ALL] << "]\n";
+    sx << "COUNTS ALL PASSED       = " << passed_w_beff[DiLepType::ALL] << "  [" << passed_counts_beff[DiLepType::ALL] << "]\n";
+    if(total_counts_beff[DiLepType::ALL]>0)
+    sx << "COUNTS ALL ACCEPTANCE   = " << passed_w_beff[DiLepType::ALL] / total_w_beff[DiLepType::ALL] << "  [" << (float)passed_counts_beff[DiLepType::ALL]/(float)total_counts_beff[DiLepType::ALL] << "]\n";
     else
     sx << "COUNTS ALL ACCEPTANCE   = -1\n";
     sx << "-------------------------------------------------------------\n";
@@ -167,6 +212,10 @@ void DiHiggsAcceptance::Terminate()
     cout << "DiHiggsAcceptance::Terminate    There were " << n_events_non_dilepton << " events that were not dileptonic (< = " << n_events_non_dilepton_less << ", > = " << n_events_non_dilepton_more << ")" << endl;
     timer()->Stop();
     cout << timer_summary() << endl;
+
+    delete m_random;
+    m_random = 0;
+
     //for(int i = 0; i < DiLepType::Invalid; i++) {
     //    total_wh[i]->Write();
     //    passed_wh[i]->Write();
@@ -291,6 +340,10 @@ Bool_t DiHiggsAcceptance::Process(Long64_t entry)
         total_counts[i]++;
         total_w[i] += w();
         total_wh[i]->Fill(w());
+
+        total_counts_beff[i]++;
+        total_w_beff[i] += w();
+        //total_wh_beff[i]->Fill(w());
     }
 
     /////////////////////////////////////////////
@@ -401,7 +454,8 @@ Bool_t DiHiggsAcceptance::Process(Long64_t entry)
         n_events_non_dilepton++;
         if(leptons.size()>2) { n_events_non_dilepton_more++; }
         else { n_events_non_dilepton_less++; }
-        return kTRUE; }
+        return kTRUE;
+    }
 
     ///////////////////////////////////////////////
     // flavor "tagging"
@@ -410,23 +464,64 @@ Bool_t DiHiggsAcceptance::Process(Long64_t entry)
     // TODO implement "efficiencies" to choose c-jets as b-jets, etc..
 
     vector<xAOD::Jet*> bjets;
+    vector<xAOD::Jet*> bjets_eff;
     for(const auto j : jets) {
         int flavor = std::abs(j->auxdata<int>("PartonTruthLabelID"));
         if(flavor==5) { bjets.push_back(j); }
+        double eta = j->eta(); 
+        if(isBJet(eta, flavor)) { bjets_eff.push_back(j); }
     }
+
+//    if(bjets.size()!=bjets_eff.size()) cout << "BLAAHHH" << endl;
 
     /////////////////////////////////////////////
     //  selection
     /////////////////////////////////////////////
     if(x_mass() > 0) {
-        resonance_acceptance(leptons, bjets, met);
+        resonance_acceptance(leptons, bjets, met, false);
+        resonance_acceptance(leptons, bjets_eff, met, true);
     }
     else {
-        non_resonant_acceptance(leptons, bjets, met);
+        non_resonant_acceptance(leptons, bjets, met, false);
+        non_resonant_acceptance(leptons, bjets_eff, met, true);
     }
 
 
     return kTRUE;
+}
+//////////////////////////////////////////////////////////////////////////////
+bool DiHiggsAcceptance::isBJet(const double eta, const int label)
+{
+
+  if(fabs(eta) > 2.5) return false;
+
+    // emulate b-tagging efficiency from FTAG group
+
+  // https://twiki.cern.ch/twiki/bin/viewauth/AtlasProtected/BTaggingBenchmarks#MV2c10_tagger_added_on_11th_May
+
+  ////    // 77% b-tagging working point
+  //if( label == 5 ) {
+  //  if(m_random->Uniform(1) > 0.7697  ) return false; // true b-jet
+  //} else if ( label == 4 ) {
+  //  if(m_random->Uniform(1) > 1/6.21  ) return false; // true c-jet
+  //} else if ( label == 15 ) {
+  //  if(m_random->Uniform(1) > 1/22.04 ) return false; // true tau-jet
+  //} else {
+  //  if(m_random->Uniform(1) > 1/134.34) return false; // everything else
+  //}
+
+  //    // 85% b-tagging working point
+  if( label == 5 ) {
+    if(m_random->Uniform(1) > 0.8495  ) return false; // true b-jet
+  } else if ( label == 4 ) {
+    if(m_random->Uniform(1) > 1/3.10  ) return false; // true c-jet
+  } else if ( label == 15 ) {
+    if(m_random->Uniform(1) > 1/8.17 ) return false; // true tau-jet
+  } else {
+    if(m_random->Uniform(1) > 1/33.53) return false; // everything else
+  }
+
+  return true;
 }
 //////////////////////////////////////////////////////////////////////////////
 float DiHiggsAcceptance::get_dr_ll_bb(vector<xAOD::TruthParticle*> leptons,
@@ -453,12 +548,12 @@ float DiHiggsAcceptance::get_dr_ll_bb(vector<xAOD::TruthParticle*> leptons,
 }
 //////////////////////////////////////////////////////////////////////////////
 void DiHiggsAcceptance::resonance_acceptance(vector<xAOD::TruthParticle*> leptons,
-            vector<xAOD::Jet*> bjets, const xAOD::MissingETContainer* met)
+            vector<xAOD::Jet*> bjets, const xAOD::MissingETContainer* met, bool is_bjet_eff)
 {
     string fn = "DiHiggsAcceptance::resonance_acceptance    ";
     float window_lower = 0.0;
     float window_upper = 0.0;
-    x_mass_window_selection(window_lower, window_upper, 0.9, 1.08);
+    x_mass_window_selection(window_lower, window_upper, 0.8, 1.10);
     //cout << fn << "WINDOW [" << window_lower << ", " << window_upper << "]" << endl;
 
 
@@ -473,7 +568,7 @@ void DiHiggsAcceptance::resonance_acceptance(vector<xAOD::TruthParticle*> lepton
 
     // bjet multiplicity
     size_t n_bjets = bjets.size();
-    if(!(n_bjets>=2)) return;
+    if(!(n_bjets==2)) return;
 
     // mll
     float mll = (leptons.at(0)->p4() + leptons.at(1)->p4()).M() * mev2gev;
@@ -482,7 +577,7 @@ void DiHiggsAcceptance::resonance_acceptance(vector<xAOD::TruthParticle*> lepton
     // lepton pT
     float pt0 = leptons.at(0)->p4().Pt()*mev2gev;
     float pt1 = leptons.at(1)->p4().Pt()*mev2gev;
-    if(!(pt0>25. && pt1>20.)) return;
+    if(!(pt0>20. && pt1>20.)) return;
 
     // SF Z-veto
     if(type==DiLepType::EE || type==DiLepType::MM) {
@@ -509,20 +604,30 @@ void DiHiggsAcceptance::resonance_acceptance(vector<xAOD::TruthParticle*> lepton
     //if(! (ht2ratio>0.9) ) return;
 
     // MT_1
-    bool do_bjet_rescaling = (x_mass() < 1000);
+    bool do_bjet_rescaling = (x_mass() <= 1000);
     float MT_1 = get_MT_1(leptons, bjets, met, do_bjet_rescaling);
-    if(! (MT_1 > window_lower && MT_1 < window_upper) ) return;
+    if(! ( (MT_1 > window_lower) && (MT_1 < window_upper)) ) return;
 
     // dR_ll_bb
     //float drllbb = get_dr_ll_bb(leptons, bjets);
     //if(! (drllbb>2.5) ) return;
 
-    passed_counts[DiLepType::ALL]++;
-    passed_counts[type]++;
-    passed_w[DiLepType::ALL] += w();
-    passed_w[type] += w();
-    passed_wh[DiLepType::ALL]->Fill(w());
-    passed_wh[type]->Fill(w());
+    if(!is_bjet_eff) {
+        passed_counts[DiLepType::ALL]++;
+        passed_counts[type]++;
+        passed_w[DiLepType::ALL] += w();
+        passed_w[type] += w();
+        passed_wh[DiLepType::ALL]->Fill(w());
+        passed_wh[type]->Fill(w());
+    }
+    else if(is_bjet_eff) {
+        passed_counts_beff[DiLepType::ALL]++;
+        passed_counts_beff[type]++;
+        passed_w_beff[DiLepType::ALL] += w();
+        passed_w_beff[type] += w();
+        //passed_wh_beff[DiLepType::ALL]->Fill(w());
+        //passed_wh_beff[type]->Fill(w());
+    }
 
 }
 //////////////////////////////////////////////////////////////////////////////
@@ -636,14 +741,18 @@ void DiHiggsAcceptance::x_mass_window_selection(float& lower, float& upper, floa
 {
     string fn = "DiHiggsAcceptance::x_mass_window_selection    ";
 
+    if(dfactor<0) { if(ufactor>=0) { cout << "error in ufactor for window selection" << endl; exit(1); } }
+    if(ufactor<0) { if(dfactor>=0) { cout << "error in dfactor for window selection" << endl; exit(1); } }
+
     // use the loaded map
-    lower = window_map_left[x_mass()] * x_mass();
-    upper = window_map_right[x_mass()] * x_mass();
-
-    //cout << fn << "WINDOW [" << lower << ", " << upper << "]" << endl;
-
-    //lower = dfactor * x_mass();
-    //upper = ufactor * x_mass();
+    if(dfactor<0 || ufactor<0) {
+        lower = window_map_left[x_mass()] * x_mass();
+        upper = window_map_right[x_mass()] * x_mass();
+    }
+    else {
+        lower = dfactor * x_mass();
+        upper = ufactor * x_mass();
+    }
 }
 //////////////////////////////////////////////////////////////////////////////
 DiLepType DiHiggsAcceptance::get_lepton_type(const vector<xAOD::TruthParticle*> leptons)
@@ -674,7 +783,7 @@ DiLepType DiHiggsAcceptance::get_lepton_type(const vector<xAOD::TruthParticle*> 
 }
 //////////////////////////////////////////////////////////////////////////////
 void DiHiggsAcceptance::non_resonant_acceptance(vector<xAOD::TruthParticle*> leptons,
-        vector<xAOD::Jet*> bjets, const xAOD::MissingETContainer* met)
+        vector<xAOD::Jet*> bjets, const xAOD::MissingETContainer* met, bool is_bjet_eff)
 {
     string fn = "DiHiggsAcceptance::non_resonant_acceptance    ";
 
@@ -686,7 +795,7 @@ void DiHiggsAcceptance::non_resonant_acceptance(vector<xAOD::TruthParticle*> lep
 
     //bjet multiplicity
     size_t n_bjets = bjets.size();
-    if(!(n_bjets>=2)) return;
+    if(!(n_bjets==2)) return;
 
     // mll
     float mll = (leptons.at(0)->p4() + leptons.at(1)->p4()).M() * mev2gev;
@@ -695,7 +804,7 @@ void DiHiggsAcceptance::non_resonant_acceptance(vector<xAOD::TruthParticle*> lep
     // lepton pT
     float pt0 = leptons.at(0)->p4().Pt()*mev2gev;
     float pt1 = leptons.at(1)->p4().Pt()*mev2gev;
-    if(!(pt0>25. && pt1>20.)) return;
+    if(!(pt0>20. && pt1>20.)) return;
 
     // SF Z-veto
     if(type==DiLepType::EE || type==DiLepType::MM) {
@@ -708,7 +817,7 @@ void DiHiggsAcceptance::non_resonant_acceptance(vector<xAOD::TruthParticle*> lep
 
     // mt2_llbb
     float mt2_llbb = get_mt2_llbb(leptons, bjets, met);
-    if(! (mt2_llbb > 90 && mt2_llbb < 140) ) return;
+    if(! (mt2_llbb > 100 && mt2_llbb < 140) ) return;
 
     // mbb
     float mbb = (bjets.at(0)->p4() + bjets.at(1)->p4()).M() * mev2gev;
@@ -722,10 +831,20 @@ void DiHiggsAcceptance::non_resonant_acceptance(vector<xAOD::TruthParticle*> lep
     float mt2_bb = get_mt2_bb(bjets, met);
     if(!(mt2_bb>150.)) return;
 
-    passed_counts[DiLepType::ALL]++;
-    passed_counts[type]++;
-    passed_w[DiLepType::ALL] += w();
-    passed_w[type] += w();
-    passed_wh[DiLepType::ALL]->Fill(w());
-    passed_wh[type]->Fill(w());
+    if(!is_bjet_eff) {
+        passed_counts[DiLepType::ALL]++;
+        passed_counts[type]++;
+        passed_w[DiLepType::ALL] += w();
+        passed_w[type] += w();
+        passed_wh[DiLepType::ALL]->Fill(w());
+        passed_wh[type]->Fill(w());
+    }
+    else if(is_bjet_eff) {
+        passed_counts_beff[DiLepType::ALL]++;
+        passed_counts_beff[type]++;
+        passed_w_beff[DiLepType::ALL] += w();
+        passed_w_beff[type] += w();
+        //passed_wh_beff[DiLepType::ALL]->Fill(w());
+        //passed_wh_beff[type]->Fill(w());
+    }
 }

@@ -15,6 +15,7 @@
 class TTree;
 namespace xAOD {
     class TEvent;
+    class TStore;
 }
 
 const double mev2gev = 1.0e-3;
@@ -79,6 +80,7 @@ class TruthSelectorBase : public TSelector
         std::string timer_summary();
 
         xAOD::TEvent* event() { return m_event; }
+        xAOD::TStore* store() { return m_tstore; }
 
         TFile *m_output_tree_file;
         TTree *m_output_tree;
@@ -100,6 +102,7 @@ class TruthSelectorBase : public TSelector
         //TTree *m_output_tree;
         TTree *m_tree;
         xAOD::TEvent* m_event;
+        xAOD::TStore* m_tstore;
 
 
         TStopwatch m_timer;

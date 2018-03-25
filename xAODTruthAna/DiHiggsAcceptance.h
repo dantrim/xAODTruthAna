@@ -18,6 +18,7 @@
 //ROOT
 #include "TH1D.h"
 #include "TFile.h"
+#include "TRandom3.h"
 
 typedef std::map<int, int> Counts;
 typedef std::map<int, float> CountsW;
@@ -51,9 +52,9 @@ class DiHiggsAcceptance : public TruthSelectorBase
         double w() { return ((m_weight * m_xsec * (m_lumi * 1000.)) / m_sumw); }
 
         void resonance_acceptance(std::vector<xAOD::TruthParticle*> leptons, std::vector<xAOD::Jet*> bjets,
-                const xAOD::MissingETContainer* met);
+                const xAOD::MissingETContainer* met, bool is_bjet_eff = false);
         void non_resonant_acceptance(std::vector<xAOD::TruthParticle*> leptons, std::vector<xAOD::Jet*> bjets,
-                const xAOD::MissingETContainer* met);
+                const xAOD::MissingETContainer* met, bool is_bjet_eff = false);
 
         float get_mt2_llbb(std::vector<xAOD::TruthParticle*> leptons, std::vector<xAOD::Jet*> bjets,
                 const xAOD::MissingETContainer* met);
@@ -65,8 +66,10 @@ class DiHiggsAcceptance : public TruthSelectorBase
 
         float get_dr_ll_bb(std::vector<xAOD::TruthParticle*> leptons, std::vector<xAOD::Jet*> bjets);
 
-        void x_mass_window_selection(float& lower, float& upper, float dfactor = 0.9, float ufactor = 1.1);
+        void x_mass_window_selection(float& lower, float& upper, float dfactor = -1, float ufactor = -1);
         DiLepType get_lepton_type(const std::vector<xAOD::TruthParticle*> leptons);
+
+        bool isBJet(const double eta, const int label);
 
 
         // TSelector overrides
@@ -89,9 +92,18 @@ class DiHiggsAcceptance : public TruthSelectorBase
         Counts passed_counts;
         CountsW total_w;
         CountsW passed_w;
-        TFile* m_outfile;
         CountsH total_wh;
         CountsH passed_wh;
+
+        Counts total_counts_beff;
+        Counts passed_counts_beff;
+        CountsW total_w_beff;
+        CountsW passed_w_beff;
+        CountsH total_wh_beff;
+        CountsH passed_wh_beff;
+
+        TFile* m_outfile;
+        TRandom3* m_random;
         bool file_setup;
         double total_sumw;
         std::map<int, double> sumw_map;
