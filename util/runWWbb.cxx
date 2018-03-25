@@ -26,6 +26,8 @@ void help()
     cout << "  --sumw               do sumw calc only" << endl;
     cout << "  -l|--lumi            set lumi (in pb) [default=1000 pb]" << endl;
     cout << "  -s|--suffix          add a suffix to output root file" << endl;
+    cout << "  --hh                 set for running over hh signals" << endl;
+    cout << "  --bjet-eff           emulate b-tagging efficiency" << endl;
     cout << "  -h                   print this help message" << endl;
 }
 
@@ -38,6 +40,8 @@ int main(int argc, char** argv)
     double lumi = 1.0; /* fb-1 */
     int dsid = 0;
     string suffix = "";
+    bool is_hh_signal = false;
+    bool use_bjet_eff = false;
 
     int optin(1);
     while(optin < argc) {
@@ -50,6 +54,8 @@ int main(int argc, char** argv)
         else if     (opt == "-h") { help(); return 0; }
         else if     (opt == "-s" || opt == "--suffix") { suffix = argv[++optin]; }
         else if     (opt == "--dsid") { dsid = atoi(argv[++optin]); }
+        else if     (opt == "--bjet-eff") { use_bjet_eff = true; }
+        else if     (opt == "--hh") { is_hh_signal = true; }
         else {
             cout << "Unknown command line argument : '" << opt << "'" << endl;
             help();
@@ -84,6 +90,8 @@ int main(int argc, char** argv)
     ana->set_lumi(lumi);
     ana->set_dsid(dsid);
     ana->set_suffix(suffix);
+    ana->set_use_bjet_eff(use_bjet_eff);
+    ana->set_is_hh_signal(is_hh_signal);
 
     if(nevents < 0) nevents = n_entries;
     cout << "-----------------------------------------------" << endl;

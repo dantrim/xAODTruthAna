@@ -16,6 +16,7 @@
 
 //ROOT
 class TH1F;
+class TH1D;
 class TFile;
 class TChain;
 class TTree;
@@ -35,7 +36,7 @@ class TBranch;
     };
 
     struct pt_greaterJet {
-        bool operator()(const xAOD::Jet* a, const xAOD::Jet* b) { return a->pt() > b->pt(); }
+        bool operator()(const xAOD::Jet a, const xAOD::Jet b) { return a.pt() > b.pt(); }
     };
 
     bool ee(const xAOD::TruthParticle* l0, const xAOD::TruthParticle* l1);
@@ -62,19 +63,24 @@ class WWbbTruth : public TruthSelectorBase
         // weight to luminosity (m_lumi is numerical value in fb-1, convert to pb-1)
         double w() { return ((m_weight * m_xsec * (m_lumi * 1000.)) / m_sumw); }
 
+        void set_use_bjet_eff(bool doit) { m_use_bjet_eff = doit; }
+        void set_is_hh_signal(bool doit) { m_is_hh_signal = doit; }
+        bool use_bjet_eff() { return m_use_bjet_eff; }
+        bool is_hh_signal() { return m_is_hh_signal; }
+
         void initialize_sumw_map();
         void initialize_xsec_map();
 
         void setup_output_tree();
         bool process_event();
-        std::vector<double> super_razor(std::vector<xAOD::TruthParticle*> leptons,
-                std::vector<xAOD::Jet*> jets, const xAOD::MissingETContainer* met);
-        void superRazor(std::vector<TLorentzVector> leptons, TLorentzVector met,
-                TVector3& vBETA_z, TVector3& pT_CM, TVector3& vBETA_T_CMtoR, TVector3& vBETA_R,
-                double& shatr, double& DPB, double& dphi_l1_l2, double& gamma, double& dphi_blah,
-                double& mdr, double& rpt);
-        void fill_tree(std::vector<xAOD::TruthParticle*> leptons,
-                std::vector<xAOD::Jet*> jets, std::vector<xAOD::Jet*> sjets, std::vector<xAOD::Jet*> bjets,
+        //std::vector<double> super_razor(std::vector<const xAOD::TruthParticle*> leptons,
+        //        std::vector<xAOD::Jet*> jets, const xAOD::MissingETContainer* met);
+        //void superRazor(std::vector<TLorentzVector> leptons, TLorentzVector met,
+        //        TVector3& vBETA_z, TVector3& pT_CM, TVector3& vBETA_T_CMtoR, TVector3& vBETA_R,
+        //        double& shatr, double& DPB, double& dphi_l1_l2, double& gamma, double& dphi_blah,
+        //        double& mdr, double& rpt);
+        void fill_tree(std::vector<const xAOD::TruthParticle*> leptons,
+                std::vector<xAOD::Jet> jets, std::vector<xAOD::Jet> sjets, std::vector<xAOD::Jet> bjets,
                 const xAOD::MissingETContainer* met);
 
         // TSelector overrides
@@ -105,9 +111,15 @@ class WWbbTruth : public TruthSelectorBase
         double m_sumw;
         double m_xsec;
         double m_lumi; // in fb-1
+        bool m_use_bjet_eff;
+        bool m_is_hh_signal;
 
         std::map<int, double> sumw_map;
         std::map<int, double> xsec_map;
+
+        std::vector<const xAOD::TruthParticle*> electrons;
+        std::vector<const xAOD::TruthParticle*> muons;
+        xAOD::TruthParticleContainer* tp_electrons;
 
         // ROOT STUFF
         TFile* m_rfile;
@@ -116,6 +128,10 @@ class WWbbTruth : public TruthSelectorBase
         ///////////////////////////////////////////
         // VARIABLES FOR OUTPUT TREE
         ///////////////////////////////////////////
+
+        // weights
+        std::vector<float> m_mcEventWeights;
+        TH1D* h_cutflow_weighted;
 
         // leptons
         int m_lepton_flavor;
@@ -158,6 +174,9 @@ class WWbbTruth : public TruthSelectorBase
         // met
         float m_metphi;
         float m_met;
+        float m_met_sumet;
+        float m_metphi_nonint;
+        float m_met_nonint;
 
         // leptons + met
         float m_dr_llmet;
@@ -174,6 +193,9 @@ class WWbbTruth : public TruthSelectorBase
         float m_dr_llbb;
         float m_dphi_llbb;
         float m_dphi_l0b0;
+        float m_dphi_l0b1;
+        float m_dr_l0b0;
+        float m_dr_l0b1;
 
         // di-bjet system + met
         float m_dr_bbmet;
@@ -188,8 +210,21 @@ class WWbbTruth : public TruthSelectorBase
         float m_sumpt;
         float m_ht2ratio;
 
+        float m_mt1;
+        float m_mt1_scaled;
+
         float m_mt2_llbb;
         float m_mt2_bb;
+
+        // hh signal
+        float m_hh;
+        float m_hh_pt;
+        float m_dphi_hh;
+        float m_drhh;
+        float m_h0_pt;
+        float m_h1_pt;
+        float m_h0_eta;
+        float m_h1_eta;
 
         // THREE-BODY VARIABLES
         int m_3b_njets;
@@ -205,8 +240,8 @@ class WWbbTruth : public TruthSelectorBase
         float m_3b_gamInvRp1;
         std::vector<float> m_3b_lepPt;
         std::vector<int> m_3b_lepQ;
-        
 
+        int n_tree_fills;
 
 
 }; // class
