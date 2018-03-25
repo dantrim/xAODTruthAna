@@ -28,6 +28,7 @@ void help()
     cout << "  -s|--suffix          add a suffix to output root file" << endl;
     cout << "  --hh                 set for running over hh signals" << endl;
     cout << "  --bjet-eff           emulate b-tagging efficiency" << endl;
+    cout << "  --skip-maps          do not use xsec or sumw map files" << endl;
     cout << "  -h                   print this help message" << endl;
 }
 
@@ -42,6 +43,7 @@ int main(int argc, char** argv)
     string suffix = "";
     bool is_hh_signal = false;
     bool use_bjet_eff = false;
+    bool skip_maps = false;
 
     int optin(1);
     while(optin < argc) {
@@ -56,6 +58,7 @@ int main(int argc, char** argv)
         else if     (opt == "--dsid") { dsid = atoi(argv[++optin]); }
         else if     (opt == "--bjet-eff") { use_bjet_eff = true; }
         else if     (opt == "--hh") { is_hh_signal = true; }
+        else if     (opt == "--skip-maps") { skip_maps = true; }
         else {
             cout << "Unknown command line argument : '" << opt << "'" << endl;
             help();
@@ -92,6 +95,7 @@ int main(int argc, char** argv)
     ana->set_suffix(suffix);
     ana->set_use_bjet_eff(use_bjet_eff);
     ana->set_is_hh_signal(is_hh_signal);
+    ana->set_skip_maps(skip_maps);
 
     if(nevents < 0) nevents = n_entries;
     cout << "-----------------------------------------------" << endl;

@@ -53,6 +53,7 @@ def main() :
                 grid_command += ('' if not args.hh else ' --hh')
                 grid_command += ('' if not args.bjet_eff else ' --bjet-eff')
                 grid_command += (' --dsid %s' % dsid)
+                grid_command += (' --skip-maps') # skip use of local xsec and sumw map files for grid submission
 
                 print "WARNING FORCING 5000 EVENTS TO RUN"
                 print "WARNING FORCING 5000 EVENTS TO RUN"

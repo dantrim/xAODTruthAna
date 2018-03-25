@@ -80,6 +80,7 @@ WWbbTruth::WWbbTruth() :
     m_lumi(1.),
     m_use_bjet_eff(false),
     m_is_hh_signal(false),
+    m_skip_maps(false),
     m_rfile(0),
     m_tree(0),
     n_tree_fills(0)
@@ -95,6 +96,8 @@ void WWbbTruth::SlaveBegin(TTree* /*tree*/)
 void WWbbTruth::initialize_xsec_map()
 {
     xsec_map.clear();
+    if(skip_maps()) return;
+
     string filename = "xsec_wwbb.txt";
     std::ifstream dfs(filename.c_str());
     int d;
@@ -114,6 +117,7 @@ void WWbbTruth::initialize_xsec_map()
 void WWbbTruth::initialize_sumw_map()
 {
     sumw_map.clear();
+    if(skip_maps()) return;
 
     string filename = "sumw_wwbb.txt";
     std::ifstream dfs(filename.c_str());
@@ -283,8 +287,14 @@ Bool_t WWbbTruth::Process(Long64_t entry)
         initialize_sumw_map();
         initialize_xsec_map();
 
-        m_xsec = xsec_map[m_dsid];
-        m_sumw = sumw_map[m_dsid];
+        if(!skip_maps()) {
+            m_xsec = xsec_map[m_dsid];
+            m_sumw = sumw_map[m_dsid];
+        }
+        else {
+            m_xsec = -1.0;
+            m_sumw = -1.0;
+        }
 
         setup_output_tree();
 

@@ -65,8 +65,10 @@ class WWbbTruth : public TruthSelectorBase
 
         void set_use_bjet_eff(bool doit) { m_use_bjet_eff = doit; }
         void set_is_hh_signal(bool doit) { m_is_hh_signal = doit; }
+        void set_skip_maps(bool doit) { m_skip_maps = doit; }
         bool use_bjet_eff() { return m_use_bjet_eff; }
         bool is_hh_signal() { return m_is_hh_signal; }
+        bool skip_maps() { return m_skip_maps; }
 
         void initialize_sumw_map();
         void initialize_xsec_map();
@@ -113,6 +115,7 @@ class WWbbTruth : public TruthSelectorBase
         double m_lumi; // in fb-1
         bool m_use_bjet_eff;
         bool m_is_hh_signal;
+        bool m_skip_maps;
 
         std::map<int, double> sumw_map;
         std::map<int, double> xsec_map;
