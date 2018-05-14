@@ -6,9 +6,12 @@
 #include <sstream>
 #include <math.h> // sqrt, cos, tanh
 #include <fstream>
+#include <map>
 using namespace std;
 
 //ROOT
+#include "TVector3.h"
+#include "TLorentzVector.h"
 #include "TH1F.h"
 #include "TH1D.h"
 #include "TFile.h"
@@ -37,6 +40,7 @@ is_pdg IsTau(15);
 
 pt_greater ByPt;
 pt_greaterJet ByPtJet;
+pt_greaterTLV tlvPtSort;
 
 bool ee(const xAOD::TruthParticle* l0, const xAOD::TruthParticle* l1)
 {
@@ -81,9 +85,11 @@ WWbbTruth::WWbbTruth() :
     m_use_bjet_eff(false),
     m_is_hh_signal(false),
     m_skip_maps(false),
+    m_top_sample(false),
     m_rfile(0),
     m_tree(0),
-    n_tree_fills(0)
+    n_tree_fills(0),
+    m_total_read_w(0.0)
 {
     cout << "WWbbTruth()" << endl;
 }
@@ -241,6 +247,7 @@ void WWbbTruth::setup_output_tree()
     m_tree->Branch("ht2ratio", &m_ht2ratio);
     m_tree->Branch("mt2_llbb", &m_mt2_llbb);
     m_tree->Branch("mt2_bb", &m_mt2_bb);
+    m_tree->Branch("mt2", &m_mt2);
     m_tree->Branch("mt1", &m_mt1);
     m_tree->Branch("mt1_scaled", &m_mt1_scaled);
 
@@ -269,6 +276,47 @@ void WWbbTruth::setup_output_tree()
     m_tree->Branch("gamInvRp1", &m_3b_gamInvRp1);
     m_tree->Branch("l_pt", &m_3b_lepPt);
     m_tree->Branch("l_q", &m_3b_lepQ);
+
+    // TOP SAMPLES
+    m_tree->Branch("truth_wpt", &m_truth_wpt);
+    m_tree->Branch("truth_wpt_lv", &m_truth_wpt_lv);
+    m_tree->Branch("truth_wmass", &m_truth_wmass);
+    m_tree->Branch("truth_wmass_lv", &m_truth_wmass_lv);
+    m_tree->Branch("truth_wq", &m_truth_wq);
+    m_tree->Branch("truth_topmass", &m_truth_topmass);
+    m_tree->Branch("truth_topq", &m_truth_topq);
+    m_tree->Branch("nWms", &m_n_wms);
+    m_tree->Branch("nWps", &m_n_wps);
+    m_tree->Branch("nWs", &m_n_ws);
+    m_tree->Branch("nTops", &m_n_tops);
+    m_tree->Branch("top_pt0", &m_top_pt0);
+    m_tree->Branch("top_pt1", &m_top_pt1);
+    m_tree->Branch("top_mass0", &m_top_mass0);
+    m_tree->Branch("top_mass1", &m_top_mass1);
+    m_tree->Branch("ttbar_pt", &m_ttbar_pt);
+    m_tree->Branch("ttbar_mass", &m_ttbar_mass);
+    m_tree->Branch("ttbar_eta", &m_ttbar_eta);
+    m_tree->Branch("ttbar_dphi", &m_ttbar_dphi);
+    m_tree->Branch("ttbar_dr", &m_ttbar_dr);
+    m_tree->Branch("ttbar_pt_out_01", &m_ttbar_pt_out_01);
+    m_tree->Branch("ttbar_pt_out_10", &m_ttbar_pt_out_10);
+    m_tree->Branch("dphi_ttbar_met", &m_dphi_ttbar_met);
+    m_tree->Branch("dphi_ttbar_sj0", &m_dphi_ttbar_sj0);
+    m_tree->Branch("dphi_ttbar_sj1", &m_dphi_ttbar_sj1);
+    m_tree->Branch("pt_ratio_sj0_ttbar", &m_pt_ratio_sj0_ttbar);
+    m_tree->Branch("pt_ratio_sj1_ttbar", &m_pt_ratio_sj1_ttbar);
+    m_tree->Branch("pt_ratio_bj0_ttbar", &m_pt_ratio_bj0_ttbar);
+    m_tree->Branch("pt_ratio_bj1_ttbar", &m_pt_ratio_bj1_ttbar);
+    m_tree->Branch("pt_ratio_bb_ttbar", &m_pt_ratio_bb_ttbar);
+    m_tree->Branch("pt_ratio_NonTTHT_ttbar", &m_pt_ratio_NonTTHT_ttbar);
+    m_tree->Branch("pt_ratio_NonTTHT_ttbar_scalar", &m_pt_ratio_NonTTHT_ttbar_scalar);
+    m_tree->Branch("dphi_NonTTHT_ttbar", &m_dphi_NonTTHT_ttbar);
+    m_tree->Branch("dphi_sj0_l0", &m_dphi_sj0_l0);
+    m_tree->Branch("dphi_sj1_l0", &m_dphi_sj1_l0);
+    m_tree->Branch("dphi_sj0_l1", &m_dphi_sj0_l1);
+    m_tree->Branch("dphi_sj1_l1", &m_dphi_sj1_l1);
+    m_tree->Branch("dphi_sj0_ll", &m_dphi_sj0_ll);
+    m_tree->Branch("dphi_sj1_ll", &m_dphi_sj1_ll);
 
 }
 //////////////////////////////////////////////////////////////////////////////
@@ -316,6 +364,7 @@ Bool_t WWbbTruth::Process(Long64_t entry)
         all_weights.clear();
         m_mcEventWeights = ei->mcEventWeights();
         m_eventweight = w();
+        m_total_read_w += w();
         process_event();
     }
 
@@ -332,29 +381,19 @@ bool WWbbTruth::process_event()
     ///////////////////////////////////////////////////
 
     // jets
-//    vector<xAOD::Jet*> jets;
     vector<xAOD::Jet> jets;
     const xAOD::JetContainer* xjets = 0;
-    //RETURN_CHECK( GetName(), event()->retrieve( xjets, "AntiKt4TruthDressedWZJets" ));
-    //RETURN_CHECK( GetName(), event()->retrieve( xjets, "ConeTruthLabelID" ));
     RETURN_CHECK( GetName(), event()->retrieve( xjets, "AntiKt4TruthJets" ));
+    //RETURN_CHECK( GetName(), event()->retrieve( xjets, "AntiKt4TruthDressedWZJets") );
     xAOD::JetContainer::const_iterator jet_itr = xjets->begin();
     xAOD::JetContainer::const_iterator jet_end = xjets->end();
-    //for( ; jet_itr != jet_end; ++jet_itr) {
     for(const auto& j : *xjets) {
-        if(!(j->p4().Pt() > 20. * GEV)) continue;
-        //if(!( (*jet_itr)->p4().Pt() > 20. * GEV) ) continue;
-        //xAOD::Jet* j = new xAOD::Jet();
-        //j->makePrivateStore(**jet_itr);
-        //jets.push_back(*j);
-        //delete j;
-        //jets.push_back(**jet_itr);
+        //if(!(j->p4().Pt() > 20. * GEV)) continue;
         jets.push_back(*j);
     } // jet_itr
     sort(jets.begin(), jets.end(), ByPtJet);
 
     // electrons
-    //vector<xAOD::TruthParticle*> electrons;
     electrons.clear();
     const xAOD::TruthParticleContainer* xelectrons = 0;
     RETURN_CHECK( GetName(), event()->retrieve( xelectrons, "TruthElectrons" ));
@@ -363,15 +402,11 @@ bool WWbbTruth::process_event()
         if(std::abs(e->eta()) > 2.47) continue;
         bool is_prompt = (e->auxdata<unsigned int>( "classifierParticleType" ) == 2);
         if(!is_prompt) continue;
-        //xAOD::TruthParticle* ele = new xAOD::TruthParticle();
-        //ele->makePrivateStore(*e);
-        //electrons.push_back(ele);
         electrons.push_back(e);
     }
     sort(electrons.begin(), electrons.end(), ByPt);
 
     // muons
-    //vector<xAOD::TruthParticle*> muons;
     muons.clear();
     const xAOD::TruthParticleContainer* xmuons = 0;
     RETURN_CHECK( GetName(), event()->retrieve( xmuons, "TruthMuons" ));
@@ -380,9 +415,6 @@ bool WWbbTruth::process_event()
         if(std::abs(m->eta()) > 2.4) continue;
         bool is_prompt = (m->auxdata<unsigned int>("classifierParticleType" ) == 6);
         if(!is_prompt) continue;
-        //xAOD::TruthParticle* mu = new xAOD::TruthParticle();
-        //mu->makePrivateStore(*m);
-        //muons.push_back(mu);
         muons.push_back(m);
     }
     sort(muons.begin(), muons.end(), ByPt);
@@ -390,10 +422,6 @@ bool WWbbTruth::process_event()
     // MET
     const xAOD::MissingETContainer* met = 0;
     RETURN_CHECK( GetName(), event()->retrieve(met, "MET_Truth" ));
-
-    // MET NonInt
-    //const xAOD::MissingETContainer* met_nonint = 0;
-    //RETURN_CHECK( GetName(), event()->retrieve(met_nonint, "MET_Truth_NonInt"));
 
 
     //////////////////////////////////////////////////////////////////
@@ -476,6 +504,44 @@ bool WWbbTruth::process_event()
     if(!(bjets.size()>=2)) {
         return true;
     }
+
+    m_truth_wpt.clear();
+    m_truth_wpt_lv.clear();
+    m_truth_wmass.clear();
+    m_truth_wmass_lv.clear();
+    m_truth_topmass.clear();
+    m_truth_topq.clear();
+    m_truth_wq.clear();
+    m_ttbar_pt = -1.;
+    m_top_pt0 = -1.;
+    m_top_pt1 = -1.;
+    m_top_mass0 = -1.;
+    m_top_mass1 = -1.;
+    m_ttbar_mass = -1.;
+    m_ttbar_dphi = -5.;
+    m_ttbar_eta = -5.;
+    m_ttbar_dr = -1.0;
+    m_ttbar_pt_out_01 = -1.;
+    m_ttbar_pt_out_10 = -1.;
+    m_dphi_ttbar_met = -5.;
+    m_dphi_ttbar_sj0 = -5.;
+    m_dphi_ttbar_sj1 = -5.;
+    m_pt_ratio_sj0_ttbar = -1.;
+    m_pt_ratio_sj1_ttbar = -1.;
+    m_pt_ratio_bj0_ttbar = -1.;
+    m_pt_ratio_bj1_ttbar = -1.;
+    m_pt_ratio_bb_ttbar = -1.;
+    m_pt_ratio_NonTTHT_ttbar_scalar = -1.;
+    m_pt_ratio_NonTTHT_ttbar = -1.;
+    m_dphi_NonTTHT_ttbar = -5.;
+    m_dphi_sj0_l0 = -5.;
+    m_dphi_sj1_l0 = -5.;
+    m_dphi_sj0_l1 = -5.;
+    m_dphi_sj1_l1 = -5.;
+    m_dphi_sj0_ll = -5.;
+    m_dphi_sj1_ll = -5.;
+    if(top_sample()) calculate_top_variables(leptons, sjets, bjets, met);
+    //if(top_sample()) calculate_top_mass_variables(leptons, sjets, bjets, met);
 
     fill_tree(leptons, jets, sjets, bjets, met);
     //delete met;
@@ -591,18 +657,471 @@ bool WWbbTruth::process_event()
 //
 //    return;
 //}
+
+//////////////////////////////////////////////////////////////////////////////
+bool WWbbTruth::calculate_top_mass_variables(vector<const xAOD::TruthParticle*> leptons,
+        vector<xAOD::Jet> sjets, vector<xAOD::Jet> bjets,
+        const xAOD::MissingETContainer* met)
+{
+    TLorentzVector metTLV;
+    metTLV.SetPxPyPzE((*met)["NonInt"]->mpx(), (*met)["NonInt"]->mpy(), 0., (*met)["NonInt"]->met());
+
+    const xAOD::TruthParticle *wboson = nullptr,
+                                *wlepton = nullptr,
+                                *wneutrino = nullptr;
+    const xAOD::TruthParticle *wbosons[2] = { nullptr },
+                                *wleptons[2] = { nullptr },
+                                *wneutrinos[2] = { nullptr };
+
+    const xAOD::TruthParticleContainer* truthTop = 0;
+    RETURN_CHECK(GetName(), event()->retrieve(truthTop, "TruthTop"));
+    
+    cout << "truthTop size = " << truthTop->size() << "  ";
+    for(const auto & top : *truthTop) cout << " " << top->status() << " (" << top->pdgId() << ", " << top->pt() << " )";
+    cout << endl;
+
+    TLorentzVector tlv_ttbar;
+    vector<TLorentzVector> vec_tlv_tops;
+
+    int status_to_look_for = 3;
+    if(m_dsid == 410500 || m_dsid == 410501) status_to_look_for = 22;
+    for(const auto & top : *truthTop) {
+        if(top->status()==status_to_look_for) {
+            m_truth_topmass.push_back(top->m()*GEV);
+            if(top->pdgId()>0) m_truth_topq.push_back(1);
+            else m_truth_topq.push_back(-1);
+
+            cout << "top q nChildren = " << top->nChildren() << endl;
+            const xAOD::TruthVertex* endVtx = top->decayVtx();
+            cout << " -> endVtx = " << endVtx << endl;
+            if(endVtx!=0) {
+                    for(unsigned int i = 0; i < endVtx->nOutgoingParticles(); i++) {
+                        const xAOD::TruthParticle* daughter = endVtx->outgoingParticle(i);
+                        cout << "   daughter["<<i<<"] = " << daughter << endl;
+                        if(daughter==0) continue;
+                        cout << "      -> status = " << daughter->status() << ",  pdgId = " << daughter->pdgId() << endl;
+                    }
+            }
+
+
+            vec_tlv_tops.push_back(top->p4());
+        }
+    } 
+
+    if(vec_tlv_tops.size()>=2) {
+
+        m_top_pt0 = vec_tlv_tops.at(0).Pt() * GEV;
+        m_top_pt1 = vec_tlv_tops.at(1).Pt() * GEV;
+
+        tlv_ttbar = (vec_tlv_tops.at(0) + vec_tlv_tops.at(1));
+
+        m_ttbar_pt = tlv_ttbar.Pt() * GEV;
+        m_ttbar_mass = tlv_ttbar.M() * GEV;
+        m_ttbar_eta = tlv_ttbar.Eta();
+
+        m_ttbar_dphi = vec_tlv_tops.at(0).DeltaPhi(vec_tlv_tops.at(1));
+        m_ttbar_dr = vec_tlv_tops.at(0).DeltaR(vec_tlv_tops.at(1));
+
+        TVector3 unitZ;
+        unitZ.SetXYZ(0,0,1);
+        TVector3 cross = vec_tlv_tops.at(0).Vect().Cross(unitZ);
+        float mag = cross.Mag();
+        float stuff = vec_tlv_tops.at(1).Vect().Dot( cross );
+        stuff = stuff / mag;
+        m_ttbar_pt_out_10 = fabs( stuff * GEV );
+
+        TVector3 cross2 = vec_tlv_tops.at(1).Vect().Cross(unitZ);
+        mag = cross2.Mag();
+        stuff = vec_tlv_tops.at(0).Vect().Dot( cross2 );
+        stuff = stuff / mag;
+        m_ttbar_pt_out_01 = fabs( stuff * GEV);
+
+
+        // add'l rad
+        m_dphi_ttbar_met = tlv_ttbar.DeltaPhi(metTLV);
+        if(sjets.size()>0) {
+            m_dphi_ttbar_sj0 = tlv_ttbar.DeltaPhi(sjets.at(0).p4());
+            m_pt_ratio_sj0_ttbar = (sjets.at(0).p4().Pt()) / (tlv_ttbar.Pt());
+
+            if(leptons.size()>0)
+                m_dphi_sj0_l0 = (sjets.at(0).p4().DeltaPhi(leptons.at(0)->p4()));
+            if(leptons.size()>1) {
+                m_dphi_sj0_l1 = (sjets.at(0).p4().DeltaPhi(leptons.at(1)->p4()));
+                m_dphi_sj0_ll = (sjets.at(0).p4().DeltaPhi(leptons.at(0)->p4() + leptons.at(1)->p4()));
+            }
+        }
+        if(sjets.size()>1) {
+            m_dphi_ttbar_sj1 = tlv_ttbar.DeltaPhi(sjets.at(1).p4());
+            m_pt_ratio_sj1_ttbar = (sjets.at(1).p4().Pt()) / (tlv_ttbar.Pt());
+
+            if(leptons.size()>0)
+                m_dphi_sj1_l0 = (sjets.at(1).p4().DeltaPhi(leptons.at(0)->p4()));
+            if(leptons.size()>1) {
+                m_dphi_sj1_l1 = (sjets.at(1).p4().DeltaPhi(leptons.at(1)->p4()));
+                m_dphi_sj1_ll = (sjets.at(1).p4().DeltaPhi(leptons.at(0)->p4() + leptons.at(1)->p4()));
+            }
+        }
+
+        if(bjets.size()>0) {
+            m_pt_ratio_bj0_ttbar = (bjets.at(0).p4().Pt()) / (tlv_ttbar.Pt());
+            
+        }
+        if(bjets.size()>1) {
+            m_pt_ratio_bj1_ttbar = (bjets.at(1).p4().Pt()) / (tlv_ttbar.Pt());
+
+            m_pt_ratio_bb_ttbar = ( (bjets.at(0).p4() + bjets.at(1).p4()).Pt()) / (tlv_ttbar.Pt());
+        }
+        float numerator = 0.0;
+        TLorentzVector sum_sj;
+        for(const auto & j : sjets) {
+            numerator += j.p4().Pt();
+            sum_sj += j.p4();
+        }
+        m_pt_ratio_NonTTHT_ttbar_scalar = (numerator / tlv_ttbar.Pt());
+        if(sjets.size()>0) {
+            m_pt_ratio_NonTTHT_ttbar = (sum_sj.Pt() / tlv_ttbar.Pt());
+            m_dphi_NonTTHT_ttbar = sum_sj.DeltaPhi(tlv_ttbar);
+        }
+
+    }
+
+    
+
+    /*
+    const xAOD::TruthVertexContainer* truthVertices = 0;
+    RETURN_CHECK(GetName(), event()->retrieve(truthVertices, "TruthVertices") );
+    */
+
+    const xAOD::TruthParticleContainer* truthBosons = 0;
+    RETURN_CHECK(GetName(), event()->retrieve(truthBosons, "TruthBoson"));
+
+    int nWps = 0;
+    int nWms = 0;
+
+    for(const auto & truthPar : *truthBosons) {
+        if(!truthPar->isW()) continue;
+        if(truthPar->status()==3) {
+            m_truth_wmass.push_back(truthPar->m()*GEV);
+            m_truth_wpt.push_back(truthPar->pt() * GEV);
+            m_truth_wq.push_back(truthPar->charge());
+            if(truthPar->pdgId()>0) { nWps++; }
+            else                    { nWms++; }
+        } // status 3
+        // aMC@NLO
+        else if(truthPar->status()==11) {
+            m_truth_wmass.push_back(truthPar->m()*GEV);
+            m_truth_wpt.push_back(truthPar->pt() * GEV);
+            m_truth_wq.push_back(truthPar->charge());
+            if(truthPar->pdgId()>0) { if(nWps==0) { nWps++; } }
+            else                     { if(nWms==0) { nWms++; } }
+        } // status 11
+    }
+
+    m_n_wms = nWms;
+    m_n_wps = nWps;
+    m_n_ws = (nWms+nWps);
+    m_n_tops = m_truth_topq.size();
+
+    //const xAOD::TruthParticleContainer* truthElectrons = 0;
+    //const xAOD::TruthParticleContainer* truthMuons = 0;
+    //RETURN_CHECK(GetName(), event()->retrieve(truthElectrons, "TruthElectrons"));
+    //RETURN_CHECK(GetName(), event()->retrieve(truthMuons, "TruthMuons"));
+
+    /*
+    //double wbPt[2] =  {0.};
+    //double wbMass[2] = {0.};
+    double wPt[2] = {0.};
+    double wMass[2] = {0.};
+    int wQ[2] = {0};
+
+    bool selfDecay = false;
+    int n_w_found = 0;
+    for(const auto& truthVertex : *truthVertices) {
+        if(truthVertex->nIncomingParticles() == 1 && truthVertex->nOutgoingParticles() == 2) {
+            const xAOD::TruthParticle* truthMother = truthVertex->incomingParticle(0);
+            if(!truthMother->isW()) continue;
+            //unsigned int fillIndex = truthMother->pdgId() > 0 ? 0 : 1;
+            wbosons[n_w_found] = truthMother;
+            wQ[n_w_found] = ((truthMother->pdgId()>0) ? 1 : -1);
+            n_w_found++;
+        }
+    } // truthVertex
+
+    if(n_w_found>=1 && wbosons[0] == nullptr) return false;
+    if(n_w_found>=2 && wbosons[1] == nullptr) return false;
+
+    if(n_w_found>=1) {
+        selfDecay = false;
+        wboson = wbosons[0];
+        do {
+            for(unsigned int i = 0; i<wboson->nChildren(); i++) {
+                selfDecay = false;
+                const xAOD::TruthParticle* child = wboson->child(i);
+                if(child->pdgId()==wboson->pdgId()) {
+                    wboson = child;
+                    selfDecay = true;
+                    break;
+                }
+                else if(child->isChLepton()) {
+                    wlepton = child;
+                    wleptons[0] = wlepton;
+                }
+                else if(child->isNeutrino()) {
+                    wneutrino = child;
+                    wneutrinos[0] = wneutrino;
+                }
+            } // i
+        } // do
+        while(selfDecay);
+    }
+
+
+    if(n_w_found>=2) {
+        selfDecay = false;
+        wboson = wbosons[1];
+        do {
+            for(unsigned int i = 0; i < wboson->nChildren(); i++) {
+                selfDecay = false; 
+                const xAOD::TruthParticle* child = wboson->child(i);
+                if(child->pdgId()==wboson->pdgId()) {
+                    wboson = child;
+                    selfDecay = true;
+                    break;
+                }
+                else if(child->isChLepton()) {
+                    wlepton = child;
+                    wleptons[1] = wlepton;
+                }
+                else if(child->isNeutrino()) {
+                    wneutrino = child;
+                    wneutrinos[1] = wneutrino;
+                }
+            } // i
+        } // do
+        while(selfDecay);
+    }
+
+    if(n_w_found>=1 && ( wleptons[0] == nullptr || wneutrinos[0] == nullptr)) return false;
+    if(n_w_found>=2 && ( wleptons[1] == nullptr || wneutrinos[1] == nullptr)) return false;
+
+    for(unsigned int ipar = 0; ipar < n_w_found; ipar++) {
+        wPt[ipar] = (wleptons[ipar]->p4() + wneutrinos[ipar]->p4()).Pt() * GEV;
+        wMass[ipar] = (wleptons[ipar]->p4() + wneutrinos[ipar]->p4()).M() * GEV;
+        m_truth_wpt_lv.push_back(wPt[ipar]);
+        m_truth_wmass_lv.push_back(wMass[ipar]);
+    }
+
+    */
+
+    return true;
+}
+//////////////////////////////////////////////////////////////////////////////
+bool WWbbTruth::calculate_top_variables(vector<const xAOD::TruthParticle*> leptons,
+        vector<xAOD::Jet> sjets, std::vector<xAOD::Jet> bjets,
+        const xAOD::MissingETContainer* met)
+{
+    const xAOD::TruthParticleContainer* truthBosons = 0;
+    RETURN_CHECK(GetName(), event()->retrieve(truthBosons, "TruthBoson"));
+
+    const xAOD::TruthParticleContainer* truthNeutrinos = 0;
+    RETURN_CHECK(GetName(), event()->retrieve(truthNeutrinos, "TruthNeutrinos"));
+
+    TLorentzVector metTLV;
+    metTLV.SetPxPyPzE((*met)["NonInt"]->mpx(), (*met)["NonInt"]->mpy(), 0., (*met)["NonInt"]->met());
+
+    std::map<int, int> lepton_to_neutrino_map = { {11,-12},{-11,12},{13,-14},{-13,14} };
+
+    std::vector<TLorentzVector> truth_ws;
+    std::vector<TLorentzVector> reco_ws;
+    std::vector<TLorentzVector> reco_bs;
+    std::vector<TLorentzVector> truth_tops;
+    std::vector<TLorentzVector> reco_tops;
+
+    std::vector<int> w_charge;
+    for(const auto & boson : *truthBosons) {
+        if(boson->status()!=3) continue;
+        if(boson->absPdgId()!=24) continue;
+        truth_ws.push_back(boson->p4());
+        w_charge.push_back(boson->charge());
+    }
+
+    if(truth_ws.size()!=2) return true;
+    for(int iw = 0; iw < (int)truth_ws.size(); iw++) {
+        bool found_w = false;
+        int w_q = w_charge.at(iw);
+        TLorentzVector reco_w;
+        for(int ilep = 0; ilep < (int)leptons.size(); ilep++) {
+            if(found_w) break;
+            int lep_q = leptons.at(ilep)->charge();
+            if(lep_q * w_q < 0) continue;
+            int lep_pdg = leptons.at(ilep)->pdgId();
+            int v_pdg_needed = lepton_to_neutrino_map[lep_pdg];
+            for(int iv = 0; iv < (int)truthNeutrinos->size(); iv++) {
+                if(found_w) break;
+                if(truthNeutrinos->at(iv)->pdgId() != v_pdg_needed) continue;
+                if(truthNeutrinos->at(iv)->status() != 1) continue;
+                // found
+                reco_w += leptons.at(ilep)->p4();
+                reco_w += truthNeutrinos->at(iv)->p4();
+                found_w = true;
+            } // iv
+        } // ilep
+        if(found_w) {
+            //cout << "WWbbTruth::calculate_top_variables    ∆R between Reco and Truth W : " << reco_w.DeltaR(truth_ws.at(iw)) << endl;
+            reco_ws.push_back(reco_w);
+        }
+    }
+
+    if(reco_ws.size() != truth_ws.size()) {
+        // in this scenario we likely have a W -> tau decay, which we dont' care about
+        return true;
+//        cout << "WWbbTruth::calculate_top_variables    WARNING Reco W's (=" << reco_ws.size() << ") not the same size as Truth Bosons (=" << truth_ws.size() << ")!" << endl;
+//        for(const auto & neutrino : *truthNeutrinos) {
+//            cout << "  -> neutrinos pdgid = " << neutrino->pdgId() << endl;
+//        }
+//        return true;
+    }
+
+    std::pair<int, int> wb_pair;
+    std::map<float, std::pair<int, int> > wb_dr_map;
+
+    float min_dr = 999.;
+    float second_min_dr = 999.;
+    for(int iw = 0; iw < truth_ws.size(); iw++) {
+//        cout << "W[" << iw << "]: ";
+        for(int ib = 0; ib < bjets.size(); ib++) {
+//            cout << truth_ws.at(iw).DeltaR(bjets.at(ib).p4()) << " " << endl;
+            float dr = truth_ws.at(iw).DeltaR(bjets.at(ib).p4());
+            std::pair<int, int> p = std::make_pair(iw,ib);
+            wb_dr_map[dr] = p;
+            if(dr < min_dr) {
+                min_dr = dr;
+            }
+            else if((dr < second_min_dr) && (dr > min_dr)) {
+                second_min_dr = dr;
+            }
+        }
+//        cout << endl;
+    }
+    std::vector<int> w_taken;
+    for(auto wbmap : wb_dr_map) {
+        float dr = wbmap.first;
+        int w_idx = std::get<0>(wbmap.second);
+        int b_idx = std::get<1>(wbmap.second);
+        if(std::find(w_taken.begin(), w_taken.end(), w_idx) == w_taken.end()) {
+            w_taken.push_back(w_idx);
+            TLorentzVector reco_top;
+            reco_top += truth_ws.at(w_idx);
+            reco_top += bjets.at(b_idx).p4();
+            reco_tops.push_back(reco_top);
+            wb_dr_map.erase(dr);
+        }
+    }
+    std::sort(reco_tops.begin(), reco_tops.end(), tlvPtSort);
+    if(reco_tops.size()>=2) {
+        m_top_pt0 = reco_tops.at(0).Pt() * GEV;
+        m_top_pt1 = reco_tops.at(1).Pt() * GEV;
+        m_top_mass0 = reco_tops.at(0).M() * GEV;
+        m_top_mass1 = reco_tops.at(1).M() * GEV;
+        TLorentzVector ttbar_tlv = (reco_tops.at(0) + reco_tops.at(1));
+        m_ttbar_pt = ttbar_tlv.Pt() * GEV;
+        m_ttbar_mass = ttbar_tlv.M() * GEV;
+        m_ttbar_dr = reco_tops.at(0).DeltaR(reco_tops.at(1));
+        m_ttbar_eta = ttbar_tlv.Eta();
+        m_ttbar_dphi = reco_tops.at(0).DeltaPhi(reco_tops.at(1));
+
+        m_dphi_ttbar_met = ttbar_tlv.DeltaPhi(metTLV);
+
+        if(sjets.size()>0) {
+            m_dphi_ttbar_sj0 = ttbar_tlv.DeltaPhi(sjets.at(0).p4());
+            m_pt_ratio_sj0_ttbar = (sjets.at(0).p4().Pt()) / (ttbar_tlv.Pt());
+
+            if(leptons.size()>0) {
+                m_dphi_sj0_l0 = (sjets.at(0).p4().DeltaPhi(leptons.at(0)->p4()));
+            }
+            if(leptons.size()>1) {
+                m_dphi_sj0_l1 = (sjets.at(0).p4().DeltaPhi(leptons.at(1)->p4()));
+                m_dphi_sj0_ll = (sjets.at(0).p4().DeltaPhi(leptons.at(0)->p4() + leptons.at(1)->p4()));
+            }
+        }
+
+        if(sjets.size()>1) {
+            m_dphi_ttbar_sj1 = ttbar_tlv.DeltaPhi(sjets.at(1).p4());
+            m_pt_ratio_sj1_ttbar = (sjets.at(1).p4().Pt()) / (ttbar_tlv.Pt());
+
+            if(leptons.size()>0) {
+                m_dphi_sj1_l0 = (sjets.at(1).p4().DeltaPhi(leptons.at(0)->p4()));
+            }
+            if(leptons.size()>1) {
+                m_dphi_sj1_l1 = (sjets.at(1).p4().DeltaPhi(leptons.at(1)->p4()));
+                m_dphi_sj1_ll = (sjets.at(1).p4().DeltaPhi(leptons.at(0)->p4() + leptons.at(1)->p4()));
+            }
+        }
+
+        if(bjets.size()>0) {
+            m_pt_ratio_bj0_ttbar = (bjets.at(0).p4().Pt()) / (ttbar_tlv.Pt());
+        }
+        if(bjets.size()>1) {
+            m_pt_ratio_bj1_ttbar = (bjets.at(1).p4().Pt()) / (ttbar_tlv.Pt());
+            m_pt_ratio_bb_ttbar = ((bjets.at(0).p4() + bjets.at(1).p4()).Pt() / (ttbar_tlv.Pt()));
+        }
+
+        float numerator = 0.0;
+        TLorentzVector sum_sj;
+        for(const auto & j : sjets) {
+            numerator += j.p4().Pt();
+            sum_sj += j.p4();
+        }
+        m_pt_ratio_NonTTHT_ttbar_scalar = (numerator / ttbar_tlv.Pt());
+        if(sjets.size()>0) {
+            m_pt_ratio_NonTTHT_ttbar = (sum_sj.Pt() / ttbar_tlv.Pt());
+            m_dphi_NonTTHT_ttbar = sum_sj.DeltaPhi(ttbar_tlv);
+        }
+
+
+        
+
+
+    } // reco_tops >= 2
+
+    
+
+
+
+    //if(leptons.size()==2) {
+    //    cout << " -------------------------------------" << endl;
+    //    for(const auto & boson : *truthBosons) {
+    //        cout << "boson pdgid = " << boson->pdgId() << "  and status = " << boson->status() << "  and pt " << boson->pt() * GEV << endl;
+    //    }
+    //    for(const auto & neutrino : *truthNeutrinos) {
+    //        cout << "neutrino pdgid = " << neutrino->pdgId() << "  and status = " << neutrino->status() << "  and pt " << neutrino->pt() * GEV << "  nParents = " << neutrino->nParents() << endl;
+    //        for(const auto & lep : leptons) {
+    //            cout << "      lep " << lep->pdgId() << "  pt = " << lep->pt() * GEV << "  DR: " << (lep->p4().DeltaR(neutrino->p4())) << endl; 
+    //        }
+    //    }
+    //}
+
+    return true;
+
+}
 //////////////////////////////////////////////////////////////////////////////
 void WWbbTruth::fill_tree(vector<const xAOD::TruthParticle*> leptons,
         vector<xAOD::Jet> jets, vector<xAOD::Jet> sjets, vector<xAOD::Jet> bjets,
         const xAOD::MissingETContainer* met)
 {
+    m_3b_nleptons = leptons.size();
     // lepton 4vec
-    m_l0_pt = leptons.at(0)->pt() * GEV;
-    m_l0_eta = leptons.at(0)->eta();
+    if(leptons.size()>0) {
+        m_l0_pt = leptons.at(0)->pt() * GEV;
+        m_l0_eta = leptons.at(0)->eta();
+    }
     if(leptons.size()>1) {
         m_l1_pt = leptons.at(1)->pt() * GEV;
         m_l1_eta = leptons.at(1)->eta();
     }
+    //n_tree_fills++;
+    //m_tree->Fill();
+    //return;
 
     // jet 4vec
     for(size_t ij = 0; ij < jets.size(); ij++) {
@@ -665,6 +1184,12 @@ void WWbbTruth::fill_tree(vector<const xAOD::TruthParticle*> leptons,
     m_nbjets = bjets.size();
 
     m_3b_nleptons = leptons.size();
+
+    if(leptons.size()>=2) {
+        ComputeMT2 calc_mt2_ll = ComputeMT2(leptons.at(0)->p4(), leptons.at(1)->p4(), metTLV);
+        m_mt2 = calc_mt2_ll.Compute() * GEV;
+    }
+
     if(bjets.size()>=2) {
         m_mbb = (bjets.at(0).p4() + bjets.at(1).p4()).M() * GEV;
         m_dr_bb = (bjets.at(0).p4().DeltaR(bjets.at(1).p4()));
@@ -836,6 +1361,7 @@ void WWbbTruth::Terminate()
         m_rfile->Write();
     }
     cout << "WWbbTruth::Terminate    n_tree_fills = " << n_tree_fills << endl;
+    cout << "WWbbTruth::Terminate    TOTAL READ W = " << m_total_read_w << endl;
 }
 
 

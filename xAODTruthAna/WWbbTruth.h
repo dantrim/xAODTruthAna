@@ -7,6 +7,8 @@
 //xAOD
 #include "xAODTruth/TruthParticleContainer.h"
 #include "xAODMissingET/MissingETContainer.h"
+#include "xAODTruth/TruthVertexContainer.h"
+#include "xAODTruth/TruthVertex.h"
 #include "xAODJet/Jet.h"
 #include "xAODJet/JetContainer.h"
 
@@ -39,6 +41,10 @@ class TBranch;
         bool operator()(const xAOD::Jet a, const xAOD::Jet b) { return a.pt() > b.pt(); }
     };
 
+    struct pt_greaterTLV {
+        bool operator()(const TLorentzVector& a, const TLorentzVector& b) { return a.Pt() > b.Pt(); }
+    };
+
     bool ee(const xAOD::TruthParticle* l0, const xAOD::TruthParticle* l1);
     bool mm(const xAOD::TruthParticle* l0, const xAOD::TruthParticle* l1);
     bool em(const xAOD::TruthParticle* l0, const xAOD::TruthParticle* l1);
@@ -66,9 +72,11 @@ class WWbbTruth : public TruthSelectorBase
         void set_use_bjet_eff(bool doit) { m_use_bjet_eff = doit; }
         void set_is_hh_signal(bool doit) { m_is_hh_signal = doit; }
         void set_skip_maps(bool doit) { m_skip_maps = doit; }
+        void set_top_sample(bool doit) { m_top_sample = doit; }
         bool use_bjet_eff() { return m_use_bjet_eff; }
         bool is_hh_signal() { return m_is_hh_signal; }
         bool skip_maps() { return m_skip_maps; }
+        bool top_sample() { return m_top_sample; }
 
         void initialize_sumw_map();
         void initialize_xsec_map();
@@ -81,14 +89,28 @@ class WWbbTruth : public TruthSelectorBase
         //        TVector3& vBETA_z, TVector3& pT_CM, TVector3& vBETA_T_CMtoR, TVector3& vBETA_R,
         //        double& shatr, double& DPB, double& dphi_l1_l2, double& gamma, double& dphi_blah,
         //        double& mdr, double& rpt);
+
+        bool calculate_top_mass_variables(std::vector<const xAOD::TruthParticle*> leptons,
+                std::vector<xAOD::Jet> sjets, std::vector<xAOD::Jet> bjets,
+                const xAOD::MissingETContainer* met);
+        bool calculate_top_variables(std::vector<const xAOD::TruthParticle*> leptons,
+                std::vector<xAOD::Jet> sjets, std::vector<xAOD::Jet> bjets,
+                const xAOD::MissingETContainer* met);
         void fill_tree(std::vector<const xAOD::TruthParticle*> leptons,
                 std::vector<xAOD::Jet> jets, std::vector<xAOD::Jet> sjets, std::vector<xAOD::Jet> bjets,
                 const xAOD::MissingETContainer* met);
+
+        //double fracParticleInJet(const xAOD::TruthParticle* thePart, const xAOD::Jet* jet,
+        //            bool DR, bool nparts);
+        //void findJetConstituents(const xAOD::Jet* jet, std::set<const xAOD::TruthParticle*>& constituents, bool dR) const;
+        
 
         // TSelector overrides
         virtual void SlaveBegin(TTree* tree);
         virtual void Terminate();
         virtual Bool_t Process(Long64_t entry);
+
+    
 
 
         //enum DileptonType {
@@ -116,6 +138,9 @@ class WWbbTruth : public TruthSelectorBase
         bool m_use_bjet_eff;
         bool m_is_hh_signal;
         bool m_skip_maps;
+        bool m_top_sample;
+
+        double m_total_read_w;
 
         std::map<int, double> sumw_map;
         std::map<int, double> xsec_map;
@@ -218,6 +243,7 @@ class WWbbTruth : public TruthSelectorBase
 
         float m_mt2_llbb;
         float m_mt2_bb;
+        float m_mt2;
 
         // hh signal
         float m_hh;
@@ -243,6 +269,53 @@ class WWbbTruth : public TruthSelectorBase
         float m_3b_gamInvRp1;
         std::vector<float> m_3b_lepPt;
         std::vector<int> m_3b_lepQ;
+
+        // top samples
+        std::vector<float> m_truth_wpt; // pt of the l+v system(s)
+        std::vector<float> m_truth_wpt_lv;
+        std::vector<float> m_truth_wmass; // mass of the l+v system(s)
+        std::vector<float> m_truth_wmass_lv; // mass of the l+v system(s)
+        std::vector<int> m_truth_wq; // W charge
+        std::vector<float> m_truth_topmass;
+        std::vector<int> m_truth_topq;
+        int m_n_wms;
+        int m_n_wps;
+        int m_n_ws;
+        int m_n_tops;
+
+        float m_ttbar_pt;
+        float m_top_pt0;
+        float m_top_pt1;
+        float m_top_mass0;
+        float m_top_mass1;
+        float m_ttbar_mass;
+        float m_ttbar_eta;
+        float m_ttbar_dphi;
+        float m_ttbar_dr;
+        float m_ttbar_pt_out_01;
+        float m_ttbar_pt_out_10;
+
+        float m_dphi_ttbar_met;
+        float m_dphi_ttbar_sj0;
+        float m_dphi_ttbar_sj1;
+        float m_pt_ratio_sj0_ttbar;
+        float m_pt_ratio_sj1_ttbar;
+        float m_pt_ratio_bj0_ttbar;
+        float m_pt_ratio_bj1_ttbar;
+        float m_pt_ratio_bb_ttbar;
+        float m_pt_ratio_NonTTHT_ttbar_scalar;
+        float m_pt_ratio_NonTTHT_ttbar;
+        float m_dphi_NonTTHT_ttbar;
+        
+
+        // add'l ttbar jet activity
+        float m_dphi_sj0_l0;
+        float m_dphi_sj1_l0;
+        float m_dphi_sj0_l1;
+        float m_dphi_sj1_l1;
+        float m_dphi_sj0_ll;
+        float m_dphi_sj1_ll;
+
 
         int n_tree_fills;
 

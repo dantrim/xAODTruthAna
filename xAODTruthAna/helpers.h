@@ -7,7 +7,7 @@
 
 namespace helpers {
 
-    float MEV2GEV = 1e-3;
+    const float MEV2GEV = 1e-3;
 
     struct is_pdg {
         int pdg;
@@ -22,6 +22,10 @@ namespace helpers {
 
     struct pt_greaterJet {
         bool operator()(const xAOD::Jet* a, const xAOD::Jet* b) { return a->pt() > b->pt(); }
+    };
+
+    struct pt_greaterTLV {
+        bool operator()(const TLorentzVector& a, const TLorentzVector& b) { return a.Pt() > b.Pt() ; }
     };
 
     bool ee(const xAOD::TruthParticle* l0, const xAOD::TruthParticle* l1);
