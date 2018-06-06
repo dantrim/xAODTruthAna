@@ -12,6 +12,7 @@ using namespace std;
 //ROOT
 #include "TLorentzVector.h"
 #include "TH1F.h"
+#include "TH2F.h"
 #include "TFile.h"
 #include "TChain.h"
 #include "TTree.h"
@@ -66,6 +67,17 @@ void HHFilterVal::setup_output_tree()
     }
     m_rfile->cd();
 
+    h_n_higgses = new TH1F("h_n_higgses", "Number of Truth Higgses in the Event;Number of Higgses; Events", 5, 0, 5);
+    h2_n_b_by_status = new TH2F("h2_n_b_by_status", "Number of b quarks by Truth Status; Number of Higgses; Truth Status", 8, 0, 8, 50, 0, 50);
+    h2_n_w_by_status = new TH2F("h2_n_w_by_status", "Number of W-bosons by Truth Status; Number of W's; Truth Status", 5, 0, 5, 50, 0, 50);
+
+    h_noh_h0_pt = new TH1F("h_noh_h0_pt", "Leading Higgs pT in Events with no h #rightarrow WW; p_{T} [GeV]; Events", 100, 0, -1);
+    h_noh_h1_pt = new TH1F("h_noh_h1_pt", "Sub-leading Higgs pT in Events with no h #rightarrow WW; p_{T} [GeV]; Events", 100, 0, -1);
+    h_noh_h0_eta = new TH1F("h_noh_h0_eta", "Leading Higgs #eta in Events with no h #rightarrow WW; #eta;Events", 100, -6, 6);
+    h_noh_h1_eta = new TH1F("h_noh_h1_eta", "Sub-leading Higgs #eta in Events with no h #rightarrow WW; #eta;Events", 100, -6, 6);
+    h_noh_h0_m = new TH1F("h_noh_h0_m", "Leading Higgs mass in Events with no h #rightarrow WW; m_{h0} [GeV]; Events", 100, 0, -1);
+    h_noh_h1_m = new TH1F("h_noh_h1_m", "Sub-leading Higgs mass in Events with no h #rightarrow WW; m_{h1} [GeV]; Events", 100, 0, -1);
+
     // histograms
     h_n_h = new TH1F("h_n_h", "Number of Higgses Per Event;Number;Events",4,0,4);
     h_mh0 = new TH1F("h_mh0", "Leading higgs Invariant Mass; m_{h0} [GeV]; a.u.", 100, 0, -1);
@@ -81,6 +93,7 @@ void HHFilterVal::setup_output_tree()
     h_mw0 = new TH1F("h_mw0", "Leading W Invariant Mass;m_{W0} [GeV];a.u.", 100, 0, -1);
     h_mw1 = new TH1F("h_mw1", "Sub-leading W Invariant Mass; m_{W1} [GeV];a.u.", 100, 0, -1);
     h_mww = new TH1F("h_mww", "WW Invariant Mass;m_{WW} [GeV];a.u.", 100, 0, -1);
+    h_mww_from_child = new TH1F("h_mww_from_child", "WW Invariant Mass (from l+#nu); m_{WW} [GeV]; a.u.", 100, 0, -1);
 
     h_n_bb = new TH1F("h_n_bb", "Event has h #rightarrow bb; Has h #rightarrow bb?;Events",2,0,2);
     h_b0_pt = new TH1F("h_b0_pt", "Leading b p_{T};p_{T}^{b0} [GeV];a.u.", 100, 0, -1);
@@ -102,6 +115,9 @@ void HHFilterVal::setup_output_tree()
     h_l1_pt = new TH1F("h_l1_pt", "Sub-lead Lepton p_{T};p_{T}^{l1} [GeV]; a.u.", 20, 0, 100); 
     h_l0_eta = new TH1F("h_l0_eta", "Lead Lepton #eta;#eta;a.u.", 60, -3,3);
     h_l1_eta = new TH1F("h_l1_eta", "Sub-lead Lepton #eta;#eta;a.u.", 60, -3,3);
+
+    h_l0_pt_from_w = new TH1F("h_l0_pt_from_w", "Lead leptton (from W decay); p_{T}^{l0} [GeV]; a.u.", 40, 0, 200);
+    h_l1_pt_from_w = new TH1F("h_l1_pt_from_w", "Sub-lead lepton (from W decay); p_{T}^{l1} [GeV]; a.u.", 20, 0, 100);
 
 }
 ////////////////////////////////////////////////////////////////////////////
@@ -134,20 +150,48 @@ Bool_t HHFilterVal::Process(Long64_t entry)
     int n_higgses = 0;
     //cout << "--------------------------------" << endl;
     for(const auto & vertex : *truthVertices) {
-        if(vertex->nIncomingParticles() == 1 && vertex->nOutgoingParticles() == 2) {
+        if(vertex->nIncomingParticles() == 1 && vertex->nOutgoingParticles() >= 2) {
             const xAOD::TruthParticle* mother = vertex->incomingParticle(0);
             if(mother && mother->absPdgId()==25) {
                 n_higgses++;
-                if(mother->nChildren()==2) {
-                    const xAOD::TruthParticle* c0 = mother->child(0);
-                    const xAOD::TruthParticle* c1 = mother->child(1);
-                    children.push_back(c0->pdgId());
-                    children.push_back(c1->pdgId());
+                if(mother->nChildren()>=2) {
+
+                    int n_b_children = 0;
+                    int n_w_children = 0;
+
+                    vector<int> child_idx;
+
+                    const xAOD::TruthParticle* c0 = nullptr;
+                    const xAOD::TruthParticle* c1 = nullptr;
+
+                    int n_children = mother->nChildren();
+                    for(int i = 0; i < n_children; i++) {
+                        if(mother->child(i)->absPdgId()==24) {
+                            n_w_children++;
+                            child_idx.push_back(i);
+                        }
+                        else if(mother->child(i)->absPdgId()==5) {
+                            n_b_children++;
+                            child_idx.push_back(i);
+                        }
+                    }
+
+                    bool is_bb = (n_b_children==2 && n_w_children==0);
+                    bool is_ww = (n_b_children==0 && n_w_children==2);
+
+                    //const xAOD::TruthParticle* c0 = mother->child(0);
+                    //const xAOD::TruthParticle* c1 = mother->child(1);
+                    //children.push_back(c0->pdgId());
+                    //children.push_back(c1->pdgId());
                     //cout << "mother higgs status = " << mother->status() << "  [child0: pdgId=" << c0->pdgId() << ", status = " << c0->status() << "] [child1: pdgId=" << c1->pdgId() << ", status = " << c1->status() << "]" << endl;
-                    if(c0->absPdgId()==5 && c1->absPdgId()==5) {
+                    //if(c0->absPdgId()==5 && c1->absPdgId()==5) {
+                    if(is_bb) {
                         if(higgs_bb.filled) {
                             cout << "HHFilterVal::Process    WARNING We found another Hbb candidate in the event!" << endl;
                         }
+
+                        c0 = mother->child(child_idx.at(0));
+                        c1 = mother->child(child_idx.at(1));
 
                         higgs_bb.filled = true;
                         higgs_bb.parent = mother;
@@ -187,10 +231,15 @@ Bool_t HHFilterVal::Process(Long64_t entry)
                         n_bb_higgs_decays++;
 
                     }
-                    else if(c0->absPdgId()==24 && c1->absPdgId()==24) {
+                    //else if(c0->absPdgId()==24 && c1->absPdgId()==24) {
+                    else if(is_ww) {
                         if(higgs_ww.filled) {
                             cout << "HHFilterVal::Process    WARNING We found another HWW candidate in the event!" << endl;
                         }
+
+                        c0 = mother->child(child_idx.at(0));
+                        c1 = mother->child(child_idx.at(1));
+
                         higgs_ww.filled = true;
                         higgs_ww.parent = mother;
                         higgs_ww.c0 = c0;
@@ -252,12 +301,12 @@ Bool_t HHFilterVal::Process(Long64_t entry)
     }
     else h_n_bb->Fill(0.0);
 
-    if(!(higgs_ww.filled &&  higgs_bb.filled)) {
-        cout << "WW filed? " << higgs_ww.filled << "  BB filled? " << higgs_bb.filled << ", n_higgs = " << n_higgses << endl;
-        cout << " --> all children: ";
-        for(auto ch : children) cout << ch << " ";
-        cout << endl;
-    }
+    //if(!(higgs_ww.filled &&  higgs_bb.filled)) {
+    //    cout << "WW filed? " << higgs_ww.filled << "  BB filled? " << higgs_bb.filled << ", n_higgs = " << n_higgses << endl;
+    //    cout << " --> all children: ";
+    //    for(auto ch : children) cout << ch << " ";
+    //    cout << endl;
+    //}
 
     higgses.clear();
     higgses.push_back(higgs_bb);
@@ -296,18 +345,18 @@ Bool_t HHFilterVal::Process(Long64_t entry)
             const xAOD::TruthParticle* lep0 = wbosons.at(0).lepton;
             const xAOD::TruthParticle* lep1 = wbosons.at(1).lepton;
 
-            //if(lep0->pt() > lep1->pt()) {
-            //    h_l0_pt->Fill(lep0->pt() * helpers::MEV2GEV, w);
-            //    h_l0_eta->Fill(lep0->eta(), w);
-            //    h_l1_pt->Fill(lep1->pt() * helpers::MEV2GEV, w);
-            //    h_l1_eta->Fill(lep1->eta(), w);
-            //}
-            //else if(lep0->pt() < lep1->pt()) {
-            //    h_l0_pt->Fill(lep1->pt() * helpers::MEV2GEV, w);
-            //    h_l0_eta->Fill(lep1->eta(), w);
-            //    h_l1_pt->Fill(lep0->pt() * helpers::MEV2GEV, w);
-            //    h_l1_eta->Fill(lep0->eta(), w);
-            //}
+            if(lep0->pt() > lep1->pt()) {
+                if(!lep0->isTau())
+                h_l0_pt_from_w->Fill(lep0->pt() * helpers::MEV2GEV, w);
+                if(!lep1->isTau())
+                h_l1_pt_from_w->Fill(lep1->pt() * helpers::MEV2GEV, w);
+            }
+            else if(lep0->pt() < lep1->pt()) {
+                if(!lep0->isTau())
+                h_l0_pt_from_w->Fill(lep1->pt() * helpers::MEV2GEV, w);
+                if(!lep1->isTau())
+                h_l1_pt_from_w->Fill(lep0->pt() * helpers::MEV2GEV, w);
+            }
 
             dilepton_flavor = get_dilepton_flavor_from_leptons(lep0, lep1);
 
@@ -336,18 +385,70 @@ Bool_t HHFilterVal::Process(Long64_t entry)
 
     int n_ele = 0;
     int n_muo = 0;
+    int n_higgses_tpr = 0;
+    int n_bs = 0;
+    stringstream status_stream;
     vector<TLorentzVector> leptons;
+    vector<TLorentzVector> initial_higgses;
     for(const auto & tpr : *truthParticles) {
         //if(tpr->status() != 1) continue;
+        if(tpr->absPdgId()==25) {
+            //n_higgses_tpr++;
+            status_stream << " " << tpr->status() << "  (n parents = " << tpr->nParents() << ", n children = " << tpr->nChildren();// << ") ";
+            if(tpr->nChildren()==3) {
+                status_stream << "  [children: ";
+                for(int i = 0; i < 3; i++) status_stream << tpr->child(i)->pdgId() << " ";
+                status_stream <<"]";
+            }
+            status_stream << ") ";
+            if(tpr->nParents()==2) { initial_higgses.push_back( tpr->p4() ); n_higgses_tpr++; }
+            //cout << "FOUND HIGGS" << endl;
+        }
+        //if(tpr->nParents()>0 && tpr->parent()->absPdgId()==25) {
+        //    cout << "FOUND HIGGS AS PARENT!" << endl;
+        //}
         if(!tpr->isChLepton()) continue;
-
         if(tpr->isElectron()) n_ele++;
         else if(tpr->isMuon()) n_muo++;
-
+        //if(tpr->status()==1) // && (tpr->isElectron() || tpr->isMuon()))
+        if(tpr->isElectron() || tpr->isMuon())
         leptons.push_back(tpr->p4());
     }
-//    h_n_leptons->Fill( (n_ele+n_muo) );
+    if(n_higgses !=2) 
+    cout << " FOUND " << n_higgses_tpr << " status: " << status_stream.str() << endl;
     helpers::pt_greaterTLV sortTLV;
+    std::sort(initial_higgses.begin(), initial_higgses.end(), sortTLV);
+    h_n_higgses->Fill(n_higgses_tpr);
+
+    if(n_higgses != 2) {
+        if(initial_higgses.size()>0) {
+            h_noh_h0_pt->Fill(initial_higgses.at(0).Pt() * helpers::MEV2GEV);
+            h_noh_h0_eta->Fill(initial_higgses.at(0).Eta());
+            h_noh_h0_m->Fill(initial_higgses.at(0).M() * helpers::MEV2GEV);
+        }
+        if(initial_higgses.size()>1) {
+            h_noh_h1_pt->Fill(initial_higgses.at(1).Pt() * helpers::MEV2GEV);
+            h_noh_h1_eta->Fill(initial_higgses.at(1).Eta());
+            h_noh_h1_m->Fill(initial_higgses.at(1).M() * helpers::MEV2GEV);
+        }
+
+    }
+
+    leptons.clear();
+    
+    const xAOD::TruthParticleContainer* x_elec = 0;
+    RETURN_CHECK(GetName(), event()->retrieve(x_elec, "TruthElectrons") ); 
+    const xAOD::TruthParticleContainer* x_muon = 0;
+    RETURN_CHECK(GetName(), event()->retrieve(x_muon, "TruthMuons") );
+
+    for(const auto & lep : *x_elec) {
+        if(lep->status()==1) leptons.push_back(lep->p4());
+    }
+    for(const auto & lep : *x_muon) {
+        if(lep->status()==1) leptons.push_back(lep->p4());
+    }
+
+//    h_n_leptons->Fill( (n_ele+n_muo) );
     h_n_leptons->Fill( leptons.size() );
     std::sort(leptons.begin(), leptons.end(), sortTLV);
     if(leptons.size()>0) {
@@ -600,6 +701,13 @@ bool HHFilterVal::fill_histograms(const HiggsCandidate& hww, const HiggsCandidat
     h_mw1->Fill(vec_ww_tlv.at(1).M() * helpers::MEV2GEV, w);
     h_mww->Fill(ww_system.M() * helpers::MEV2GEV, w);
 
+    TLorentzVector lvlv_system;
+    lvlv_system += wbosons.at(0).lepton->p4();
+    lvlv_system += wbosons.at(0).neutrino->p4();
+    lvlv_system += wbosons.at(1).lepton->p4();
+    lvlv_system += wbosons.at(1).neutrino->p4();
+    h_mww_from_child->Fill(lvlv_system.M() * helpers::MEV2GEV, w);
+
     TLorentzVector bb_system;
     bb_system += hbb.c0->p4();
     bb_system += hbb.c1->p4();
@@ -646,6 +754,17 @@ bool HHFilterVal::save_histograms()
 //    m_rfile->cd();
     cout << "this is the fucking file: " << m_rfile << endl;
 
+    h_n_higgses->Write();
+    h2_n_b_by_status->Write();
+    h2_n_w_by_status->Write();
+
+    h_noh_h0_pt->Write();
+    h_noh_h1_pt->Write();
+    h_noh_h0_eta->Write();
+    h_noh_h1_eta->Write();
+    h_noh_h0_m->Write();
+    h_noh_h1_m->Write();
+
     h_n_h->Write();
     h_mh0->Write();
     h_mh1->Write();
@@ -660,6 +779,7 @@ bool HHFilterVal::save_histograms()
     h_mw0->Write();
     h_mw1->Write();
     h_mww->Write();
+    h_mww_from_child->Write();
 
     h_n_bb->Write();
     h_b0_pt->Write();
@@ -674,6 +794,9 @@ bool HHFilterVal::save_histograms()
     h_l1_pt->Write();
     h_l0_eta->Write();
     h_l1_eta->Write();
+
+    h_l0_pt_from_w->Write();
+    h_l1_pt_from_w->Write();
 
     //m_rfile->Write();
     //m_rfile->Close();

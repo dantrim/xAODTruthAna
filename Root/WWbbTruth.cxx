@@ -383,12 +383,14 @@ bool WWbbTruth::process_event()
     // jets
     vector<xAOD::Jet> jets;
     const xAOD::JetContainer* xjets = 0;
-    RETURN_CHECK( GetName(), event()->retrieve( xjets, "AntiKt4TruthJets" ));
-    //RETURN_CHECK( GetName(), event()->retrieve( xjets, "AntiKt4TruthDressedWZJets") );
+    if(m_dsid!=410472)
+        RETURN_CHECK( GetName(), event()->retrieve( xjets, "AntiKt4TruthJets" ));
+    else 
+        RETURN_CHECK( GetName(), event()->retrieve( xjets, "AntiKt4TruthDressedWZJets") );
     xAOD::JetContainer::const_iterator jet_itr = xjets->begin();
     xAOD::JetContainer::const_iterator jet_end = xjets->end();
     for(const auto& j : *xjets) {
-        //if(!(j->p4().Pt() > 20. * GEV)) continue;
+        if(!(j->p4().Pt() > 20. * GEV)) continue;
         jets.push_back(*j);
     } // jet_itr
     sort(jets.begin(), jets.end(), ByPtJet);
@@ -938,11 +940,17 @@ bool WWbbTruth::calculate_top_variables(vector<const xAOD::TruthParticle*> lepto
     std::vector<TLorentzVector> reco_tops;
 
     std::vector<int> w_charge;
+    int status_to_look_for = 3;
+    if(m_dsid==410472 || m_dsid==410500 || m_dsid==410501) status_to_look_for = 22;
     for(const auto & boson : *truthBosons) {
-        if(boson->status()!=3) continue;
+        if(boson->status()!=status_to_look_for) continue;
         if(boson->absPdgId()!=24) continue;
         truth_ws.push_back(boson->p4());
         w_charge.push_back(boson->charge());
+        //if(boson->status()!=3) continue;
+        //if(boson->absPdgId()!=24) continue;
+        //truth_ws.push_back(boson->p4());
+        //w_charge.push_back(boson->charge());
     }
 
     if(truth_ws.size()!=2) return true;

@@ -87,7 +87,7 @@ int main(int argc, char** argv)
     ana->set_lumi(lumi);
     ana->set_dsid(dsid);
     ana->set_suffix(suffix);
-    /gana->set_skip_maps(skip_maps);
+    //gana->set_skip_maps(skip_maps);
 
     if(nevents < 0) nevents = n_entries;
     cout << "-----------------------------------------------" << endl;

@@ -16,6 +16,7 @@
 
 class TFile;
 class TH1F;
+class TH2F;
 
 
 class HHFilterVal : public TruthSelectorBase
@@ -116,6 +117,19 @@ class HHFilterVal : public TruthSelectorBase
         // ROOT STUFF
         TFile* m_rfile;
 
+        // counters
+        TH1F* h_n_higgses;
+        TH2F* h2_n_b_by_status;
+        TH2F* h2_n_w_by_status;
+
+        // initial higgs for events with no H->WW
+        TH1F* h_noh_h0_pt;
+        TH1F* h_noh_h1_pt;
+        TH1F* h_noh_h0_eta;
+        TH1F* h_noh_h1_eta;
+        TH1F* h_noh_h0_m;
+        TH1F* h_noh_h1_m;
+
         // histograms
         TH1F* h_n_h;
         TH1F* h_mh0;
@@ -132,6 +146,7 @@ class HHFilterVal : public TruthSelectorBase
         TH1F* h_mw0;
         TH1F* h_mw1;
         TH1F* h_mww;
+        TH1F* h_mww_from_child;
 
         TH1F* h_n_bb;
         TH1F* h_b0_pt;
@@ -145,6 +160,9 @@ class HHFilterVal : public TruthSelectorBase
         TH1F* h_l1_pt;
         TH1F* h_l0_eta;
         TH1F* h_l1_eta;
+
+        TH1F* h_l0_pt_from_w;
+        TH1F* h_l1_pt_from_w;
 
 
 
